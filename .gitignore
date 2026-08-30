@@ -1,0 +1,7 @@
+node_modules/
+frames/
+bg/
+sfx.wav
+*.mp4
+!assets/bg-source.mp4
+data.js
