@@ -51,7 +51,9 @@
 
   // ── ابزار رسم ────────────────────────────────────────────────
   function rr(ctx, x, y, w, h, r) {
-    const rad = Array.isArray(r) ? r : [r, r, r, r];
+    // شعاع هرگز از نصف کوچک‌ترین ضلع بیشتر نشود، وگرنه مسیر به شکل پروانه درمی‌آید
+    const cap = Math.max(0, Math.min(w, h) / 2);
+    const rad = (Array.isArray(r) ? r : [r, r, r, r]).map((v) => Math.min(v, cap));
     ctx.beginPath();
     ctx.moveTo(x + rad[0], y);
     ctx.lineTo(x + w - rad[1], y); ctx.quadraticCurveTo(x + w, y, x + w, y + rad[1]);
@@ -325,7 +327,7 @@
     // قرص
     const pa = seg(t, 0.28, .5);
     const pv = backOut(pa, 2);
-    if (pa > 0) pill(ctx, box.x, top + 20 * (1 - p3o(pa)), D.kicker || "", pa, .9 + .1 * pv);
+    if (pa > 0 && D.kicker) pill(ctx, box.x, top + 20 * (1 - p3o(pa)), D.kicker, pa, .9 + .1 * pv);
 
     // عنوان — هر سطر از پایین بالا می‌آید، داخل ماسک خودش
     const goldTail = (D.hookGold || "").trim();
@@ -827,6 +829,12 @@
 
       bakeBackground();
       bakeGrain();
+
+      // گزارش وضعیت، برای عیب‌یابی از سمت Scriptable
+      try {
+        window.__fontsOk = !!(document.fonts && document.fonts.check('800 76px PJS'));
+      } catch (e) { window.__fontsOk = false; }
+      window.__assetsOk = Object.keys(A).filter((k) => A[k]).length + "/" + Object.keys(A).length;
       return true;
     },
 
