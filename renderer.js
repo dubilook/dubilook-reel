@@ -496,7 +496,9 @@
     const max = Math.max.apply(null, bars.map((b) => b.value)) || 1;
     const rightPad = 104, axisW = w - rightPad;
     const baseY = y + h - 70;
-    const topY = y + 90;
+    // سقف میله‌ها پایین‌تر می‌آید تا عدد و نشانِ بالای میله جا شوند و روی هم نیفتند
+    const hasBadge = bars.some((b) => b.badge);
+    const topY = y + (hasBadge ? 200 : 110);
 
     // خطوط راهنما
     const ga = p2o(seg(t, 4.84, .58));
@@ -604,7 +606,8 @@
           ctx.globalAlpha = Math.min(1, ba * 2);
           ctx.font = font(600, 23);
           const tw = ctx.measureText(b.badge).width + 44;
-          ctx.translate(bx + bw / 2, Math.max(y + 30, by - 112));
+          // درست بالای عددِ میله؛ عدد در by-18 نوشته می‌شود و بلندایش حدود ۵۰
+          ctx.translate(bx + bw / 2, by - 18 - 50 - 42);
           ctx.scale(s, s);
           const g = ctx.createLinearGradient(-tw / 2, 0, tw / 2 * .4, 52);
           g.addColorStop(0, "rgba(245,196,81,.26)"); g.addColorStop(1, "rgba(245,196,81,.08)");
@@ -863,6 +866,10 @@
     draw(ctx, Wc, Hc, p, D) {
       const t = cl(p) * TOTAL;
       D = D || {};
+
+      // بوم جهت متن را از صفحه به ارث می‌برد. اگر صفحه راست‌به‌چپ باشد،
+      // نقطه و ویرگول و علامت سؤالِ متن انگلیسی به ابتدای سطر می‌پرند.
+      try { ctx.direction = "ltr"; } catch (e) {}
 
       // پس‌زمینه
       if (bgBaked) ctx.drawImage(bgBaked, 0, 0);
