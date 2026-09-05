@@ -900,6 +900,10 @@
         if (a <= 0) return;
         ctx.save();
         ctx.globalAlpha = a;
+        // هیچ چیزی نمی‌تواند از حاشیهٔ چپ و راست بیرون بزند، هر فونتی که بارگذاری شده باشد
+        ctx.beginPath();
+        ctx.rect(M - 14, 0, W - (M - 14) * 2, H);
+        ctx.clip();
         if (s.id === 1) scene1(ctx, t, D);
         else if (s.id === 2) scene2(ctx, t, D);
         else if (s.id === 3) textScene(ctx, t, D, 3);
