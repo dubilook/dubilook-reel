@@ -87,6 +87,25 @@
     return out;
   }
 
+  // متن را با اندازه‌ای می‌چیند که حتماً داخل عرض جا شود.
+  // اگر فونت اختصاصی بارگذاری نشده باشد، فونت جایگزین پهن‌تر است و
+  // بدون این کوچک‌سازی متن از قاب بیرون می‌زند.
+  function fitLines(ctx, text, maxW, weight, size, minRatio) {
+    let s = size;
+    const floor = size * (minRatio || 0.68);
+    let lines;
+    for (;;) {
+      ctx.font = font(weight, s);
+      lines = wrap(ctx, text, maxW);
+      let widest = 0;
+      lines.forEach((l) => { widest = Math.max(widest, ctx.measureText(l).width); });
+      if (widest <= maxW || s <= floor) break;
+      s = Math.max(floor, s * Math.min(0.97, maxW / widest));
+    }
+    ctx.font = font(weight, s);
+    return { lines, size: s };
+  }
+
   function shadow(ctx, color, blur, oy) {
     ctx.shadowColor = color; ctx.shadowBlur = blur;
     ctx.shadowOffsetX = 0; ctx.shadowOffsetY = oy || 0;
@@ -110,6 +129,8 @@
   }
 
   async function loadFonts() {
+    // اگر صفحه خودش PJS را با @font-face تعریف کرده، کاری لازم نیست
+    try { if (document.fonts && document.fonts.check('800 76px PJS')) { await document.fonts.ready; return; } } catch (e) {}
     if (!window.FontFace || !document.fonts) return;
     const defs = [["800", "assets/pjs-800.woff2"], ["600", "assets/pjs-600.woff2"], ["500", "assets/pjs-500.woff2"]];
     await Promise.all(defs.map(([w, u]) => {
@@ -315,13 +336,12 @@
     const box = { x: M, y: L.scTop, w: W - M * 2, h: H - L.scBottom - L.scTop };
 
     // اندازه‌گیری برای وسط‌چین عمودی
-    ctx.font = font(800, L.h1);
-    const lh = L.h1 * 1.06;
-    const lines = wrap(ctx, D.hook || "", box.w);
-    ctx.font = font(500, 33);
-    const subLines = wrap(ctx, D.sub || "", Math.min(820, box.w));
-    const PILL_H = 62, PILL_GAP = 38, SUB_GAP = 34;
-    const totalH = PILL_H + PILL_GAP + lines.length * lh + SUB_GAP + subLines.length * 33 * 1.42;
+    const fitH = fitLines(ctx, D.hook || "", box.w, 800, L.h1);
+    const lines = fitH.lines, h1s = fitH.size, lh = h1s * 1.06;
+    const fitS = fitLines(ctx, D.sub || "", Math.min(820, box.w), 500, 33, .8);
+    const subLines = fitS.lines, subs = fitS.size;
+    const PILL_H = D.kicker ? 62 : 0, PILL_GAP = D.kicker ? 38 : 0, SUB_GAP = 34;
+    const totalH = PILL_H + PILL_GAP + lines.length * lh + SUB_GAP + subLines.length * subs * 1.42;
     let top = box.y + Math.max(0, (box.h - totalH) / 2);
 
     // قرص
@@ -335,14 +355,14 @@
     const goldStart = goldTail && hookStr.endsWith(goldTail) ? hookStr.length - goldTail.length : -1;
     let consumed = 0;
 
-    let y = top + PILL_H + PILL_GAP + L.h1 * 0.82;
+    let y = top + PILL_H + PILL_GAP + h1s * 0.82;
     lines.forEach((ln, i) => {
       const a = seg(t, 0.44 + i * 0.10, .82);
       const e = p4o(a);
       const ty = (1 - e) * lh * 1.12;
       ctx.save();
       ctx.beginPath(); ctx.rect(box.x - 10, y - lh * 0.86, box.w + 20, lh); ctx.clip();
-      ctx.font = font(800, L.h1);
+      ctx.font = font(800, h1s);
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 
       // بخش طلایی — ممکن است بین چند سطر شکسته باشد
@@ -370,11 +390,11 @@
     if (sa > 0) {
       ctx.save();
       ctx.globalAlpha = se;
-      ctx.font = font(500, 33);
+      ctx.font = font(500, subs);
       ctx.fillStyle = "#9dadd6";
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       let sy = y + 34 + 24 * (1 - se);
-      subLines.forEach((s) => { ctx.fillText(s, box.x, sy); sy += 33 * 1.42; });
+      subLines.forEach((s) => { ctx.fillText(s, box.x, sy); sy += subs * 1.42; });
       ctx.restore();
     }
   }
@@ -610,9 +630,9 @@
       : { at: 14.28, rot: 25, lead: "WHY IT MATTERS", txt: D.takeaway, ico: D.icons && D.icons.takeaway, rule: true };
 
     // اندازه‌گیری برای وسط‌چین عمودی
-    ctx.font = font(800, L.big);
-    const txtLines = wrap(ctx, cfg.txt || "", box.w);
-    const totalH = L.ico + 34 + (cfg.rule ? 48 : 0) + 27 + 26 + txtLines.length * L.big * 1.22;
+    const fit = fitLines(ctx, cfg.txt || "", box.w, 800, L.big);
+    const txtLines = fit.lines, bigs = fit.size;
+    const totalH = L.ico + 34 + (cfg.rule ? 48 : 0) + 27 + 26 + txtLines.length * bigs * 1.22;
     let y = box.y + Math.max(0, (box.h - totalH) / 2);
 
     // کاشی آیکون
@@ -656,12 +676,12 @@
     if (ta > 0) {
       ctx.save();
       ctx.globalAlpha = te;
-      ctx.font = font(800, L.big);
+      ctx.font = font(800, bigs);
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       shadow(ctx, "rgba(5,7,15,.9)", 26, 3);
       let ty = y + 30 * (1 - te);
-      txtLines.forEach((s) => { ctx.fillText(s, box.x, ty); ty += L.big * 1.22; });
+      txtLines.forEach((s) => { ctx.fillText(s, box.x, ty); ty += bigs * 1.22; });
       ctx.restore();
       noShadow(ctx);
     }
@@ -672,9 +692,9 @@
     const box = { x: M, y: L.scTop, w: W - M * 2, h: H - L.scBottom - L.scTop };
     const cx = W / 2;
 
-    ctx.font = font(800, L.q);
-    const lines = wrap(ctx, D.question || "", Math.min(860, box.w));
-    const blockH = L.ico + 44 + lines.length * L.q * 1.24 + 46 + 29;
+    const fitQ = fitLines(ctx, D.question || "", Math.min(860, box.w), 800, L.q);
+    const lines = fitQ.lines, qs = fitQ.size;
+    const blockH = L.ico + 44 + lines.length * qs * 1.24 + 46 + 29;
     let y = box.y + (box.h - blockH) / 2;
 
     const ia = seg(t, 18.28, .66), ie = backOut(ia, 2.3);
@@ -694,15 +714,15 @@
     if (qa > 0) {
       ctx.save();
       ctx.globalAlpha = qe;
-      ctx.font = font(800, L.q);
+      ctx.font = font(800, qs);
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "center"; ctx.textBaseline = "top";
       shadow(ctx, "rgba(5,7,15,.9)", 26, 3);
       let ty = y + 30 * (1 - qe);
-      lines.forEach((s) => { ctx.fillText(s, cx, ty); ty += L.q * 1.24; });
+      lines.forEach((s) => { ctx.fillText(s, cx, ty); ty += qs * 1.24; });
       ctx.restore();
       noShadow(ctx);
-      y += lines.length * L.q * 1.24;
+      y += lines.length * qs * 1.24;
     }
 
     const ca = seg(t, 18.86, .55);
@@ -808,24 +828,26 @@
   window.DUBILOOK_RENDERER = {
     duration: TOTAL,
 
-    async init(D, layout) {
+    // src اختیاری است: نگاشت نام به data-URI، برای وقتی دارایی‌ها
+    // داخل خود صفحه جاسازی شده‌اند (حالت Artifact). اگر نباشد،
+    // از مسیرهای نسبی assets/ استفاده می‌شود (حالت گیت‌هاب).
+    async init(D, layout, src) {
       L = LAYOUTS[layout === "full" ? "full" : "safe"];
       await loadFonts();
 
-      const want = ["photo:assets/dubai-night.jpg",
-                    "logo:assets/logo-light.png",
-                    "endLogo:assets/logo-light.png",
-                    "lens:assets/logo-lens.png"];
+      const at = (name, fallback) => (src && src[name]) ? src[name] : fallback;
+
+      const want = [["photo",   at("dubai-night", "assets/dubai-night.jpg")],
+                    ["logo",    at("logo-light",  "assets/logo-light.png")],
+                    ["endLogo", at("logo-light",  "assets/logo-light.png")],
+                    ["lens",    at("logo-lens",   "assets/logo-lens.png")]];
+
       const icons = new Set();
       if (D && D.icons) Object.keys(D.icons).forEach((k) => D.icons[k] && icons.add(D.icons[k]));
       icons.add("chat-two-bubbles-oval");
-      icons.forEach((n) => want.push(n + ":assets/" + n + ".svg"));
+      icons.forEach((n) => want.push([n, at(n, "assets/" + n + ".svg")]));
 
-      await Promise.all(want.map(async (spec) => {
-        const i = spec.indexOf(":");
-        const key = spec.slice(0, i), url = spec.slice(i + 1);
-        A[key] = await loadImg(url);
-      }));
+      await Promise.all(want.map(async ([key, url]) => { A[key] = await loadImg(url); }));
 
       bakeBackground();
       bakeGrain();
