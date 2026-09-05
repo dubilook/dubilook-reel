@@ -289,14 +289,22 @@
 
   // ── قرص عنوان ────────────────────────────────────────────────
   function pill(ctx, x, y, text, a, scale) {
+    const FS = 24, SP = FS * 0.20;          // فاصلهٔ حروف، همان letter-spacing:.20em
+    const PADL = 22, PADR = 28, DOT = 11, GAP = 14;
+
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.font = font(600, 24);
-    const tw = ctx.measureText(text).width + 24 * 2 + 11 + 14 + text.length * 4.8;
-    const w = ctx.measureText(text).width * 1 + 22 + 28 + 11 + 14;
+    ctx.font = font(600, FS);
+
+    // عرض واقعی متن همان است که رسم می‌شود: مجموع حروف به‌علاوهٔ فاصله‌ها.
+    // فاصلهٔ پس از آخرین حرف داخل کادر حساب نمی‌شود.
+    const textW = Math.max(0, spacedWidth(ctx, text, SP) - SP);
+    const w = PADL + DOT + GAP + textW + PADR;
     const h = 62;
+
     ctx.translate(x, y);
     ctx.scale(scale, scale);
+
     const g = ctx.createLinearGradient(0, 0, w * .6, h);
     g.addColorStop(0, "rgba(245,196,81,.22)");
     g.addColorStop(1, "rgba(245,196,81,.07)");
@@ -305,13 +313,13 @@
 
     ctx.fillStyle = "#f5c451";
     shadow(ctx, "rgba(245,196,81,.65)", 16);
-    ctx.beginPath(); ctx.arc(22 + 5.5, h / 2, 5.5, 0, 6.284); ctx.fill();
+    ctx.beginPath(); ctx.arc(PADL + DOT / 2, h / 2, DOT / 2, 0, 6.284); ctx.fill();
     noShadow(ctx);
 
     ctx.fillStyle = "#ffdd85";
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.font = font(600, 24);
-    letterSpaced(ctx, text, 22 + 11 + 14, h / 2, 24 * 0.20);
+    letterSpaced(ctx, text, PADL + DOT + GAP, h / 2, SP);
+
     ctx.restore();
     return { w: w * scale, h: h * scale };
   }
