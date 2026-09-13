@@ -222,6 +222,29 @@
     noShadow(ctx);
   }
 
+  // ── نام منبع ─────────────────────────────────────────────────
+  // گاهی به‌جای نام نشریه یک آدرس می‌رسد: جیمیل هر چیزی که شبیه دامنه باشد
+  // (مثل PROPERTYNEWS.AE) را به لینک ردیابی خودش تبدیل می‌کند و همان لینک
+  // بلند داخل JSON می‌نشیند. اینجا هر آدرسی به نام کوتاه دامنه برمی‌گردد.
+  function srcName(v) {
+    let s = String(v == null ? "" : v).trim();
+    if (!s) return "";
+
+    // لینک واسطهٔ گوگل:  https://www.google.com/url?q=<آدرس واقعی>&source=gmail…
+    if (/google\.[a-z.]+\/url/i.test(s)) {
+      const q = /[?&]q=([^&]+)/.exec(s);
+      if (q) { try { s = decodeURIComponent(q[1]); } catch (e) { s = q[1]; } }
+    }
+
+    // اگر اصلاً آدرس نیست، همان نام است — فقط کوتاهش می‌کنیم
+    const looksURL = /^[a-z][a-z0-9+.-]*:\/\//i.test(s) || /^www\./i.test(s) || s.indexOf("/") >= 0;
+    if (!looksURL) return s.length > 34 ? s.slice(0, 34) : s;
+
+    s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/^www\./i, "");
+    s = s.split("/")[0].split("?")[0].split("#")[0].split("@").pop();
+    return s.toUpperCase();
+  }
+
   // ── چرم ثابت: نوار پیشرفت، لوگو، خط منبع ────────────────────
   function chrome(ctx, t, D) {
     const p = t / TOTAL;
@@ -277,7 +300,7 @@
       const off = ctx.measureText("SOURCE  ").width;
       ctx.font = font(600, 19);
       ctx.fillStyle = "#a8b5d8";
-      ctx.fillText(D.source || "", M + off, y);
+      ctx.fillText(srcName(D.source), M + off, y);
       ctx.textAlign = "right";
       ctx.font = font(500, 19);
       ctx.fillStyle = "#8593bb";
