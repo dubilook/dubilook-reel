@@ -339,6 +339,22 @@
     return w;
   }
 
+  // ── نام آیکون برای یک جایگاه ─────────────────────────────────
+  // D.icons می‌تواند دو شکل داشته باشد:
+  //   شیء نام‌دار : {stat:"…", detail:"…", takeaway:"…", question:"…"}
+  //   آرایه       : ["…","…","…"]  به همان ترتیب (خروجی تسک روزانه)
+  // هر دو پشتیبانی می‌شوند تا آیکون‌ها در هر دو حالت رسم شوند.
+  const ICO_SLOTS = ["stat", "detail", "takeaway", "question"];
+  function icoName(D, slot) {
+    const ic = D && D.icons;
+    if (!ic) return "";
+    if (Array.isArray(ic)) {
+      const i = ICO_SLOTS.indexOf(slot);
+      return (i >= 0 && ic[i]) ? ic[i] : "";
+    }
+    return ic[slot] || "";
+  }
+
   // ── صحنه ۱ — قلاب ───────────────────────────────────────────
   function scene1(ctx, t, D) {
     const box = { x: M, y: L.scTop, w: W - M * 2, h: H - L.scBottom - L.scTop };
@@ -429,7 +445,7 @@
 
     // سربرگ کارت
     const ia = backOut(seg(t, 4.50, .6), 2.4);
-    const icoKey = (D.icons && D.icons.stat) || "";
+    const icoKey = icoName(D, "stat");
     if (A[icoKey] && ia > 0) {
       ctx.save();
       ctx.translate(box.x + padX + 29, cardY + padY + 29);
@@ -637,8 +653,8 @@
   function textScene(ctx, t, D, n) {
     const box = { x: M, y: L.scTop, w: W - M * 2, h: H - L.scBottom - L.scTop };
     const cfg = n === 3
-      ? { at: 10.28, rot: -25, lead: "WHAT HAPPENED", txt: D.detail, ico: D.icons && D.icons.detail, rule: false }
-      : { at: 14.28, rot: 25, lead: "WHY IT MATTERS", txt: D.takeaway, ico: D.icons && D.icons.takeaway, rule: true };
+      ? { at: 10.28, rot: -25, lead: "WHAT HAPPENED", txt: D.detail, ico: icoName(D, "detail"), rule: false }
+      : { at: 14.28, rot: 25, lead: "WHY IT MATTERS", txt: D.takeaway, ico: icoName(D, "takeaway"), rule: true };
 
     // اندازه‌گیری برای وسط‌چین عمودی
     const fit = fitLines(ctx, cfg.txt || "", box.w, 800, L.big);
@@ -714,7 +730,7 @@
       ctx.translate(cx, y + L.ico / 2 + 30 * (1 - ie));
       ctx.scale(ie, ie);
       glass(ctx, -L.ico / 2, -L.ico / 2, L.ico, L.ico, 36);
-      const k = (D.icons && D.icons.question) || "chat-two-bubbles-oval";
+      const k = icoName(D, "question") || "chat-two-bubbles-oval";
       if (A[k]) ctx.drawImage(A[k], -L.icoImg / 2, -L.icoImg / 2, L.icoImg, L.icoImg);
       ctx.restore();
       neon(ctx, cx - L.ico / 2, y, L.ico, L.ico, 36, seg(t, 18.50, 1.4), 300, "#eaf0ff");
@@ -854,7 +870,11 @@
                     ["lens",    at("logo-lens",   "assets/logo-lens.png")]];
 
       const icons = new Set();
-      if (D && D.icons) Object.keys(D.icons).forEach((k) => D.icons[k] && icons.add(D.icons[k]));
+      if (D && D.icons) {
+        const ic = D.icons;
+        const names = Array.isArray(ic) ? ic : Object.keys(ic).map((k) => ic[k]);
+        names.forEach((n) => n && icons.add(n));
+      }
       icons.add("chat-two-bubbles-oval");
       icons.forEach((n) => want.push([n, at(n, "assets/" + n + ".svg")]));
 
