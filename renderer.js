@@ -49,6 +49,41 @@
 
   const nf = (n) => Math.round(n).toLocaleString("en-US");
 
+  // ── اعداد بزرگ ──────────────────────────────────────────────
+  // عددی مثل 800000000 در کارت جا نمی‌شود؛ به «800 Million» تبدیل می‌شود.
+  // BIGNUM_FIX_V14
+  function toNum(v) {
+    if (typeof v === "number") return isFinite(v) ? v : 0;
+    const n = parseFloat(String(v == null ? "" : v).replace(/[^0-9.\-]/g, ""));
+    return isFinite(n) ? n : 0;
+  }
+  // مقیاس مشترک برای یک عدد (یا بیشینهٔ چند عدد)
+  function numScale(max) {
+    const a = Math.abs(max);
+    if (a >= 1e9) return { div: 1e9, word: "Billion", short: "B" };
+    if (a >= 1e6) return { div: 1e6, word: "Million", short: "M" };
+    return { div: 1, word: "", short: "" };
+  }
+  // اعشار فقط وقتی لازم است (1.5 Billion، 1.25 Billion) و حداکثر دو رقم؛ عدد گرد نمی‌شود
+  function decimalsFor(v) {
+    for (let d = 0; d < 2; d++) {
+      const f = Math.pow(10, d);
+      if (Math.abs(v * f - Math.round(v * f)) < 1e-6 * f) return d;
+    }
+    return 2;
+  }
+  function fmtScaled(v, dec) {
+    return v.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+  // اندازهٔ فونتی که متن یک‌خطی را داخل عرض نگه دارد
+  function fitSize(ctx, text, maxW, weight, size, min) {
+    ctx.font = font(weight, size);
+    const w = ctx.measureText(text).width;
+    const s = w > maxW ? Math.max(min || 10, Math.floor(size * maxW / w)) : size;
+    ctx.font = font(weight, s);
+    return s;
+  }
+
   // ── ابزار رسم ────────────────────────────────────────────────
   function rr(ctx, x, y, w, h, r) {
     // شعاع هرگز از نصف کوچک‌ترین ضلع بیشتر نشود، وگرنه مسیر به شکل پروانه درمی‌آید
@@ -499,8 +534,16 @@
 
   function drawBigStat(ctx, t, D, x, y, w, h) {
     const na = seg(t, 4.80, 1.5), ne = p3o(na);
-    const val = (D.statValue || 0) * ne;
+    const raw = toNum(D.statValue);
+    let unit = String(D.statUnit || "");
+    // اگر واحد خودش Million/Billion دارد، عدد از قبل کوتاه شده است
+    const sc0 = /\b(million|billion|thousand)\b/i.test(unit) ? numScale(0) : numScale(raw);
+    const target = raw / sc0.div;
+    const dec = decimalsFor(target);
+    if (sc0.word) unit = sc0.word + (unit ? " " + unit : "");
+    const val = target * ne;
     const cx = x + w / 2;
+    const finalTxt = fmtScaled(target, dec);
 
     ctx.save();
     ctx.textAlign = "center";
@@ -508,10 +551,11 @@
     const sc = .8 + .2 * backOut(Math.min(1, na * 2.5), 1.8);
     ctx.translate(cx, y + h * .46);
     ctx.scale(sc, sc);
-    ctx.font = font(800, 180);
+    // اندازه بر اساس عدد نهایی حساب می‌شود تا در طول شمارش تغییر نکند
+    fitSize(ctx, finalTxt, w - 120, 800, 180, 70);
     ctx.fillStyle = goldFill(ctx, -w / 2, w);
     ctx.textBaseline = "middle";
-    ctx.fillText(nf(val), 0, 0);
+    ctx.fillText(fmtScaled(val, dec), 0, 0);
     ctx.restore();
 
     const ua = seg(t, 5.60, .5);
@@ -519,9 +563,9 @@
       ctx.save();
       ctx.globalAlpha = ua;
       ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.font = font(600, 52);
+      fitSize(ctx, unit, w - 120, 600, 52, 30);
       ctx.fillStyle = "#ffdd85";
-      ctx.fillText(D.statUnit || "", cx, y + h * .46 + 100 + 18 * (1 - p2o(ua)));
+      ctx.fillText(unit, cx, y + h * .46 + 100 + 18 * (1 - p2o(ua)));
       ctx.restore();
     }
     const ba = seg(t, 5.85, .5);
@@ -540,7 +584,9 @@
 
   function drawChart(ctx, t, D, x, y, w, h) {
     const bars = D.chart.bars;
-    const max = Math.max.apply(null, bars.map((b) => b.value)) || 1;
+    const max = Math.max.apply(null, bars.map((b) => toNum(b.value))) || 1;
+    const bsc = numScale(max);
+    const bfmt = (v, d) => fmtScaled(v / bsc.div, d) + bsc.short;
     const rightPad = 104, axisW = w - rightPad;
     const baseY = y + h - 70;
     // سقف میله‌ها پایین‌تر می‌آید تا عدد و نشانِ بالای میله جا شوند و روی هم نیفتند
@@ -558,7 +604,7 @@
         ctx.save(); ctx.globalAlpha = ta;
         ctx.font = font(500, 20); ctx.fillStyle = "#606e99";
         ctx.textAlign = "right"; ctx.textBaseline = "middle";
-        ctx.fillText(nf(max * (i / 3)), x + w, gy);
+        ctx.fillText(bfmt(max * (i / 3), bsc.div > 1 ? 1 : 0), x + w, gy);
         ctx.restore();
       }
     }
@@ -577,7 +623,8 @@
     bars.forEach((b, k) => {
       const at = 5.24 + k * 0.78, dur = .9 + k * .2;
       const e = p3o(seg(t, at, dur));
-      const full = (baseY - topY) * (b.value / max);
+      const bv = toNum(b.value);
+      const full = (baseY - topY) * (bv / max);
       const bh = full * e;
       const bx = zoneX + k * (bw + gap);
       const by = baseY - bh;
@@ -624,10 +671,11 @@
       if (va > 0) {
         ctx.save();
         ctx.globalAlpha = va;
-        ctx.font = font(800, 50);
+        const bdec = decimalsFor(bv / bsc.div);
+        fitSize(ctx, bfmt(bv, bdec), bw + gap - 16, 800, 50, 26);
         ctx.fillStyle = isGold ? "#ffdd85" : "#a9bcff";
         ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-        ctx.fillText(nf(b.value * e), bx + bw / 2, by - 18);
+        ctx.fillText(bfmt(bv * e, bdec), bx + bw / 2, by - 18);
         ctx.restore();
       }
 
