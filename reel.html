@@ -232,6 +232,11 @@ if (LAYOUT === 'full') document.body.classList.add('full');
 const D = window.DATA;
 const $ = s => document.querySelector(s);
 const nf = n => Math.round(n).toLocaleString('en-US');
+/* BIGNUM_FIX (ported from renderer.js V14): 125000000000 -> "125" + "Billion" — never rounded */
+const numScale = m => { const a = Math.abs(m);
+  return a >= 1e9 ? {div: 1e9, word: 'Billion', short: 'B'} : a >= 1e6 ? {div: 1e6, word: 'Million', short: 'M'} : {div: 1, word: '', short: ''}; };
+const decimalsFor = v => { for (let d = 0; d < 2; d++) { const f = Math.pow(10, d); if (Math.abs(v * f - Math.round(v * f)) < 1e-6 * f) return d; } return 2; };
+const fmtScaled = (v, dec) => v.toLocaleString('en-US', {minimumFractionDigits: dec, maximumFractionDigits: dec});
 
 /* ---------- populate ---------- */
 $('#srcName').textContent = D.source;
@@ -291,7 +296,8 @@ if (hasChart) {
   document.querySelectorAll('.gtx').forEach(t => {
     const v = nice * +t.dataset.f;
     t.style.bottom = (XLABH + px(v)) + 'px';
-    t.textContent = v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.round(v / 1e3) + 'K';
+    const gs = numScale(nice);
+    t.textContent = gs.div > 1 ? fmtScaled(v / gs.div, decimalsFor(v / gs.div)) + gs.short : (v >= 1e3 ? Math.round(v / 1e3) + 'K' : String(Math.round(v)));
   });
   bars.forEach((b, i) => {
     const el = document.getElementById('bar' + i);
@@ -301,7 +307,10 @@ if (hasChart) {
 } else {
   $('#plot').style.display = 'none';
   $('#bigwrap').style.display = 'block';
-  $('#bigunit').textContent = D.statUnit || '';
+  { const raw = Number(D.statValue) || 0, unit = String(D.statUnit || '');
+    const sc = /(million|billion|thousand)/i.test(unit) ? numScale(0) : numScale(raw);
+    window.BIG = {target: raw / sc.div, dec: decimalsFor(raw / sc.div)};
+    $('#bigunit').textContent = sc.word ? sc.word + (unit ? ' ' + unit : '') : unit; }
   $('#biglab').textContent  = D.statLabel || '';
 }
 
@@ -404,15 +413,18 @@ if (hasChart) {
     const o = {n: 0};
     tl.to('#bar' + c.i, {scaleY: 1, duration: dur, ease: 'power3.out'}, at)
       .to(o, {n: c.v, duration: dur, ease: 'power3.out',
-              onUpdate: () => {document.getElementById('v' + c.i).textContent = nf(o.n)}}, at)
+              onUpdate: () => {const cs = numScale(Math.max(...chartTargets.map(x => x.v)));
+                document.getElementById('v' + c.i).textContent = cs.div > 1 ? fmtScaled(o.n / cs.div, decimalsFor(c.v / cs.div)) + cs.short : nf(o.n)}}, at)
       .from('#v' + c.i, {opacity: 0, duration: .28}, at);
   });
   if (document.getElementById('badge'))
     tl.from('#badge', {scale: .4, opacity: 0, duration: .62, ease: 'back.out(2.7)'}, 7.30);
 } else {
-  const o = {n: 0}, target = D.statValue || 0;
+  const o = {n: 0}, target = window.BIG.target;
+  $('#bignum').textContent = fmtScaled(target, window.BIG.dec);
+  fit($('#bignum'), 180, 70);
   tl.to(o, {n: target, duration: 1.5, ease: 'power3.out',
-            onUpdate: () => {$('#bignum').textContent = nf(o.n)}}, 4.80)
+            onUpdate: () => {$('#bignum').textContent = fmtScaled(o.n, window.BIG.dec)}}, 4.80)
     .from('#bignum', {opacity: 0, scale: .8, duration: .6, ease: 'back.out(1.8)'}, 4.80)
     .from('#bigunit', {opacity: 0, y: 18, duration: .5}, 5.60)
     .from('#biglab', {opacity: 0, y: 18, duration: .5}, 5.85);

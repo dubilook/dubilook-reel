@@ -1,0 +1,175 @@
+{
+  "provider": "Epidemic Sound",
+  "plan": "Pro",
+  "account": "4everpropertiesuae@gmail.com (subscription owned by 4Ever Properties)",
+  "active": true,
+  "terms_checked": "2026-09-26 — https://www.epidemicsound.com/our-plans/pro-plan/ : sublicensing for client channels allowed; 3 channels per platform; excludes companies > $10m/yr revenue; videos published during an active subscription are cleared forever, videos published after it ends are not.",
+  "safelisted": {
+    "instagram": [
+      "dubilook"
+    ],
+    "facebook": [
+      "https://www.facebook.com/Dubilook"
+    ],
+    "safelisted_on": "2026-09-26"
+  },
+  "not_required": [
+    "threads",
+    "telegram",
+    "linkedin",
+    "whatsapp"
+  ],
+  "rule": "If 'active' is false, build-reel.mjs refuses every track in this folder. Set it to false the day the subscription ends.",
+  "tracks": [
+    {
+      "file": "ES_DOX Pt. II - Lennon Hutton.mp3",
+      "title": "DOX Pt. II",
+      "artist": "Lennon Hutton",
+      "duration_sec": 228.2,
+      "start_sec": 46.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Fake Business - _91nova.mp3",
+      "title": "Fake Business",
+      "artist": "_91nova",
+      "duration_sec": 142.9,
+      "start_sec": 18.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_In a Time Lapse - DEX 1200.mp3",
+      "title": "In a Time Lapse",
+      "artist": "DEX 1200",
+      "duration_sec": 185.8,
+      "start_sec": 44.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Maracuja - Tusabe.mp3",
+      "title": "Maracuja",
+      "artist": "Tusabe",
+      "duration_sec": 210.7,
+      "start_sec": 60.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Mindscape - Lennon Hutton.mp3",
+      "title": "Mindscape",
+      "artist": "Lennon Hutton",
+      "duration_sec": 185.7,
+      "start_sec": 95.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_One More Time - Experia.mp3",
+      "title": "One More Time",
+      "artist": "Experia",
+      "duration_sec": 164.1,
+      "start_sec": 3.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Outer Orbit - Shuta Yasukochi.mp3",
+      "title": "Outer Orbit",
+      "artist": "Shuta Yasukochi",
+      "duration_sec": 254.9,
+      "start_sec": 73.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Pyrite - Harbours & Oceans.mp3",
+      "title": "Pyrite",
+      "artist": "Harbours & Oceans",
+      "duration_sec": 292.5,
+      "start_sec": 2.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Radar Focus - Blue Saga.mp3",
+      "title": "Radar Focus",
+      "artist": "Blue Saga",
+      "duration_sec": 266.8,
+      "start_sec": 0.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Soundbed - Blue Saga.mp3",
+      "title": "Soundbed",
+      "artist": "Blue Saga",
+      "duration_sec": 190.8,
+      "start_sec": 5.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Strangers on the Go (Instrumental Version) - Mindme.mp3",
+      "title": "Strangers on the Go (Instrumental Version)",
+      "artist": "Mindme",
+      "duration_sec": 223.8,
+      "start_sec": 48.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Theories - Out To The World.mp3",
+      "title": "Theories",
+      "artist": "Out To The World",
+      "duration_sec": 166.2,
+      "start_sec": 14.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Timeless Serenity - dvine.mp3",
+      "title": "Timeless Serenity",
+      "artist": "dvine",
+      "duration_sec": 213.8,
+      "start_sec": 15.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_Wait for Us to Collide (Instrumental Version) - Mindme.mp3",
+      "title": "Wait for Us to Collide (Instrumental Version)",
+      "artist": "Mindme",
+      "duration_sec": 171.2,
+      "start_sec": 0.5,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    },
+    {
+      "file": "ES_You like It (Instrumental Version) - Gloria Tells.mp3",
+      "title": "You like It (Instrumental Version)",
+      "artist": "Gloria Tells",
+      "duration_sec": 181.7,
+      "start_sec": 51.0,
+      "instrumental": true,
+      "added": "2026-09-26",
+      "enabled": true
+    }
+  ]
+}
