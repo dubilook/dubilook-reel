@@ -5,3 +5,4 @@ sfx.wav
 *.mp4
 !assets/bg-source.mp4
 data.js
+assets/music/*.mp3
