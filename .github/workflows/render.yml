@@ -1,0 +1,44 @@
+name: render
+# Triggered by the site (repository_dispatch "render") or by hand. Renders every item in the
+# payload with studio/render-job.mjs and uploads the files to the site's render-callback.
+on:
+  repository_dispatch:
+    types: [render]
+  workflow_dispatch:
+    inputs:
+      payload_json:
+        description: "Same JSON the site sends as client_payload"
+        required: true
+concurrency:
+  group: render
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: studio }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          cd studio && npm ci --silent || npm i --silent
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Restore caches (background plate)
+        uses: actions/cache@v4
+        with:
+          path: bg
+          key: bg-plate-${{ hashFiles('assets/bg-source.mp4') }}
+      - name: Write payload
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+          MANUAL: ${{ github.event.inputs.payload_json }}
+        run: |
+          if [ -n "$MANUAL" ]; then echo "$MANUAL" > payload.json; else echo "$PAYLOAD" > payload.json; fi
+          node -e "const p=require('./payload.json'); console.log('items:', (p.items||[]).length, 'brand:', p.brand)"
+      - name: Render + upload
+        env:
+          IG_API_SECRET: ${{ secrets.IG_API_SECRET }}
+        run: node studio/render-job.mjs payload.json
