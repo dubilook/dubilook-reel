@@ -55,8 +55,13 @@ for (const it of payload.items) {
     switch (it.format) {
       case "story":
         if (it.template === "story-cover") { await still("post-story", { type: "story-cover", title: d.title, hooks: d.hooks || [], label: d.label || "NEW POST" }, f("0.jpg")); }
-        else { await still("story", cardOf(d), f("0.jpg")); }
+        else {
+          await still("story", cardOf(d), f("0.jpg"));
+          // a 9:16 story card is tiny in a Telegram feed — give the channel the 4:5 post card of the same news
+          await still("post", cardOf(d), f("tg.jpg"));
+        }
         await upload(it.id, 0, "image", f("0.jpg"));
+        if (fs.existsSync(f("tg.jpg"))) await upload(it.id, 20, "image", f("tg.jpg"), { variant: "telegram" });
         break;
       case "image":
         await still("post", cardOf(d), f("0.jpg"));
