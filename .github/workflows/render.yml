@@ -16,9 +16,25 @@ jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MUSIC_REPO_TOKEN: ${{ secrets.MUSIC_REPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: studio }
+      # Reel music lives in the PRIVATE repo dubilook/studio-music (the Epidemic Sound licence forbids a public copy).
+      # Needs the repo secret MUSIC_REPO_TOKEN (read-only, that repo only). Without it reels are rendered silent.
+      - name: Fetch reel music (private repo)
+        if: ${{ env.MUSIC_REPO_TOKEN != '' }}
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: dubilook/studio-music
+          token: ${{ env.MUSIC_REPO_TOKEN }}
+          path: studio-music
+      - name: Place music and licence record
+        if: ${{ env.MUSIC_REPO_TOKEN != '' }}
+        continue-on-error: true
+        run: mkdir -p assets/music && cp studio-music/*.mp3 studio-music/LICENSE.json assets/music/ && ls assets/music | wc -l
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Install deps
