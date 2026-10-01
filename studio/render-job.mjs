@@ -79,7 +79,7 @@ for (const it of payload.items) {
       }
       case "reel": {
         // build-reel.mjs reads a delivery; wrap this item's data in a minimal one
-        const mini = { run_date: payload.day || new Date().toISOString().slice(0, 10), news: [{ source_domain: d.source_domain || "dubilook.com", date: d.date || payload.day, evidence: [] }],
+        const mini = { run_date: payload.day || new Date().toISOString().slice(0, 10), news: [{ source_domain: d.source_domain || "dubilook.com", source_name: d.source, date: d.date || payload.day, evidence: [] }],
                        reel: { ...d, news_index: 0 } };
         const miniFile = f("delivery.json"); fs.writeFileSync(miniFile, JSON.stringify(mini));
         const out = f("0.mp4");

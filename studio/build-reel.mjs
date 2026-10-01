@@ -46,7 +46,7 @@ const DATA = {
   kicker: r.kicker, hook: r.hook, hookGold: r.hookGold, sub: r.sub, statLabelShort: r.statLabelShort,
   chart: r.chart ?? null, statValue: r.statValue, statUnit: r.statUnit, statLabel: r.statLabel,
   detail: r.detail, takeaway: r.takeaway, question: r.question, icons: r.icons,
-  source: SOURCE_NAMES[src.source_domain] || src.source_domain.split(".")[0].toUpperCase(),
+  source: (src.source_name ? String(src.source_name).toUpperCase() : null) || SOURCE_NAMES[src.source_domain] || src.source_domain.split(".")[0].toUpperCase(),
   date: `${d} ${MON[m - 1]} ${y}`,
 };
 
