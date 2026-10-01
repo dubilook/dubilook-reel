@@ -64,6 +64,25 @@ for (const it of payload.items) {
   try {
     const d = it.data || {};
     const f = (n) => path.join(work, `item${it.id}-${n}`);
+    // light-theme education cards (edu-renderer.js): one 4:5 image, or a checklist carousel
+    if (String(it.template || "").startsWith("edu-")) {
+      if (d.kind === "checklist") {
+        const steps = d.steps || [], of = steps.length + 2;
+        await still("edu", { type: "list-cover", title: d.headline, red: d.red || [], subtitle: d.subtitle || "", of }, f("0.jpg"));
+        await upload(it.id, 0, "image", f("0.jpg"));
+        for (const [k, s] of steps.entries()) {
+          await still("edu", { type: "list-item", n: k + 1, title: s.title, body: s.body, slide: { n: k + 2, of } }, f(`${k + 1}.jpg`));
+          await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`));
+        }
+        await still("edu", { type: "list-cta", text: d.cta || "", slide: { n: of, of } }, f(`${of - 1}.jpg`));
+        await upload(it.id, of - 1, "image", f(`${of - 1}.jpg`));
+      } else {
+        await still("edu", { ...d, type: d.kind }, f("0.jpg"));
+        await upload(it.id, 0, "image", f("0.jpg"));
+      }
+      done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
+      continue;
+    }
     switch (it.format) {
       case "story":
         if (it.template === "story-cover") { await still("post-story", { type: "story-cover", title: d.title, hooks: d.hooks || [], label: d.label || "NEW POST" }, f("0.jpg")); }
