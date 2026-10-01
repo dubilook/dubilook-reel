@@ -4,23 +4,27 @@
 <body style="margin:0;background:#111">
 <script src="/stories-renderer.js"></script>
 <script src="/studio/post-renderer.js"></script>
+<script src="/studio/edu-renderer.js"></script>
 <script>
   const SRC = {
     "pjs-500": "/assets/pjs-500.woff2", "pjs-600": "/assets/pjs-600.woff2", "pjs-800": "/assets/pjs-800.woff2",
-    "anton": "/assets/anton.woff2", "logo-lens": "/assets/logo-lens.png", "logo-light": "/assets/logo-light.png"
+    "anton": "/assets/anton.woff2", "logo-lens": "/assets/logo-lens.png", "logo-light": "/assets/logo-light.png", "logo-dark": "/assets/logo-dark.png"
   };
   window.ready = (async () => {
     const a = await window.DUBILOOK_STORIES.init(SRC);
     const b = await window.DUBILOOK_POSTS.init(SRC);
-    return { stories: a, posts: b };
+    const e = await window.DUBILOOK_EDU.init(SRC);
+    return { stories: a, posts: b, edu: e };
   })();
   // kind: "story" (stories-renderer, 1080x1920) | "post" (1080x1350) | "post-story" (post-renderer at 1920)
+  //       | "edu" (edu-renderer, light theme, 1080x1350)
   window.renderCard = (kind, card, quality) => {
     const c = document.createElement("canvas");
     c.width = 1080;
-    c.height = kind === "post" ? 1350 : 1920;
+    c.height = kind === "post" || kind === "edu" ? 1350 : 1920;
     const ctx = c.getContext("2d");
     if (kind === "story") window.DUBILOOK_STORIES.draw(ctx, card, {});
+    else if (kind === "edu") window.DUBILOOK_EDU.draw(ctx, card);
     else window.DUBILOOK_POSTS.draw(ctx, card, c.height);
     return c.toDataURL("image/jpeg", quality || 0.92);
   };
