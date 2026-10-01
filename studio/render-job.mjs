@@ -42,8 +42,20 @@ async function upload(itemId, position, kind, file, meta = {}) {
   const fd = new FormData();
   fd.append("item", String(itemId)); fd.append("position", String(position)); fd.append("kind", kind); fd.append("meta", JSON.stringify(meta));
   fd.append("file", new Blob([fs.readFileSync(file)], { type: kind === "video" ? "video/mp4" : "image/jpeg" }), path.basename(file));
-  const r = await fetch(callback, { method: "POST", headers: { "X-IG-Secret": SECRET }, body: fd });
-  if (!r.ok) throw new Error(`upload ${path.basename(file)} → HTTP ${r.status} ${await r.text()}`);
+  // The site is sometimes slow; a network error or 5xx gets 4 more tries (10 s, 30 s, 60 s, 120 s apart).
+  for (let attempt = 0; ; attempt++) {
+    let r, err;
+    try { r = await fetch(callback, { method: "POST", headers: { "X-IG-Secret": SECRET }, body: fd }); } catch (e) { err = e; }
+    if (r) {
+      if (r.ok) return;
+      err = new Error(`upload ${path.basename(file)} → HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+      if (r.status < 500) throw err;
+    }
+    if (attempt >= 4) throw err;
+    const wait = [10, 30, 60, 120][attempt];
+    console.warn(`! ${err.message} — retry in ${wait}s`);
+    await new Promise((res) => setTimeout(res, wait * 1000));
+  }
 }
 const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline: d.headline, red: d.red || [], summary: d.summary, angle: d.angle || "", source: d.source, date: d.date });
 
