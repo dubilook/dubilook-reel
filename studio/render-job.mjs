@@ -20,7 +20,7 @@ const completeUrl = callback.replace(/render-callback$/, "render-complete");
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "ig-render-"));
 
 // ── static server for the canvas host page ──
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".svg": "image/svg+xml" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".ttf": "font/ttf", ".svg": "image/svg+xml" };
 const server = http.createServer((req, res) => {
   const p = path.join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
@@ -80,6 +80,18 @@ for (const it of payload.items) {
         await still("edu", { ...d, type: d.kind }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
       }
+      done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
+      continue;
+    }
+    // Arabic news cards (ar-renderer.js, RTL): 9:16 story (+ the 4:5 card for Telegram) or 4:5 feed post
+    if (d.lang === "ar") {
+      const card = { ...cardOf(d), type: "news" };
+      if (it.format === "story") {
+        await still("ar-story", card, f("0.jpg")); await upload(it.id, 0, "image", f("0.jpg"));
+        await still("ar", card, f("tg.jpg")); await upload(it.id, 20, "image", f("tg.jpg"), { variant: "telegram" });
+      } else if (it.format === "image") {
+        await still("ar", card, f("0.jpg")); await upload(it.id, 0, "image", f("0.jpg"));
+      } else throw new Error("Arabic " + it.format + " is not built yet");
       done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
       continue;
     }
