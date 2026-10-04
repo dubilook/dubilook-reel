@@ -184,7 +184,8 @@
     for (; size >= 52; size -= 2) {
       ctx.font = head(size); lines = balanced(ctx, text, maxW); lh = size * 1.32;
       ctx.font = ar(500, sumSize); sum = summary ? balanced(ctx, summary, maxW - 60) : [];
-      blockH = lines.length * lh + (sum.length ? 40 + sum.length * sumLH : 0);
+      // Lalezar's descenders (ي ر و) hang ~0.4 em below the baseline — reserve them, or the summary runs into the last line (2026-10-04)
+      blockH = lines.length * lh + (sum.length ? size * 0.42 + 40 + sum.length * sumLH : 0);
       if (lines.length <= maxLines && blockH <= bottom - top) break;
     }
     ctx.textBaseline = "alphabetic";
@@ -192,7 +193,8 @@
     ctx.font = head(size);
     const gap = ctx.measureText(" ").width;
     lines.forEach((ln) => { wi = rtlLine(ctx, ln.split(" "), mask, wi, W / 2, y, base || WHITE, gap); y += lh; });
-    y += -lh + 40 + sumSize * 1.25;
+    const desc = Math.max(size * 0.42, ctx.measureText(lines[lines.length - 1] || "").actualBoundingBoxDescent || 0);
+    y += -lh + desc + 40 + sumSize * 1.0;
     if (sum.length) {
       ctx.font = ar(500, sumSize); ctx.fillStyle = sumColor || GREY; ctx.textAlign = "center";
       sum.forEach((ln) => { ctx.fillText(ln, W / 2, y); y += sumLH; });

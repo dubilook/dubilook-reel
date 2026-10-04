@@ -232,12 +232,16 @@
     background(ctx); brandRow(ctx, 118);
     pill(ctx, "NUMBER OF THE DAY", 220);
     const num = String(c.number);
-    let size = 420; ctx.font = heavy(size);
+    // a long body (4 lines) needs room above the footer rule: smaller number
+    let size = String(c.body || "").length > 120 ? 370 : 420; ctx.font = heavy(size);
     while (ctx.measureText(num).width > W - 2 * M - 40 && size > 140) { size -= 10; ctx.font = heavy(size); }
     ctx.fillStyle = RED; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    const ny = 300 + size * 0.92;
+    // Place by the real ink box: a comma or "," tail hangs below the baseline and ran into the unit line (2026-10-04)
+    const mt = ctx.measureText(num);
+    const asc = mt.actualBoundingBoxAscent || size * 0.92, desc = Math.max(0, mt.actualBoundingBoxDescent || 0);
+    const ny = 300 + asc;
     ctx.fillText(num, W / 2, ny);
-    let y = ny + 30;
+    let y = ny + desc + 18;
     if (c.unit) { ctx.font = font(800, 30); ctx.fillStyle = INK; spaced(ctx, c.unit.toUpperCase(), W / 2, y + 30, 6, "center"); y += 50; }
     const end = bigText(ctx, c.label, c.red, y + 20, y + 200, 84, 2);
     para(ctx, c.body, end + 70, 34, "#3a3632");
