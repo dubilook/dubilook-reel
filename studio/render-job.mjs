@@ -28,6 +28,12 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
+// The workflow's `npx playwright install` can fetch a NEWER Playwright than the locked playwright-core
+// (2026-10-08: 1.64 vs 1.63 → no matching Chromium → every render died in 1 s). Install our own version's browser.
+if (!process.env.CHROME_PATH && process.platform !== "win32") {
+  const cli = path.join(ROOT, "studio/node_modules/playwright-core/cli.js");
+  if (fs.existsSync(cli)) spawnSync(process.execPath, [cli, "install", "chromium"], { stdio: "inherit" });
+}
 const exe = process.env.CHROME_PATH || (process.platform === "win32" ? "C:/Program Files/Google/Chrome/Application/chrome.exe" : undefined);
 const browser = await chromium.launch({ executablePath: exe && fs.existsSync(exe) ? exe : undefined });
 const page = await browser.newPage();
