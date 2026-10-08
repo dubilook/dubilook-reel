@@ -35,10 +35,23 @@ if (!process.env.CHROME_PATH && process.platform !== "win32") {
   if (fs.existsSync(cli)) spawnSync(process.execPath, [cli, "install", "chromium"], { stdio: "inherit" });
 }
 const exe = process.env.CHROME_PATH || (process.platform === "win32" ? "C:/Program Files/Google/Chrome/Application/chrome.exe" : undefined);
-const browser = await chromium.launch({ executablePath: exe && fs.existsSync(exe) ? exe : undefined });
-const page = await browser.newPage();
-await page.goto(base + "/studio/host.html");
-await page.evaluate(() => window.ready);
+// A crash before the first item used to end the run without calling render-complete, so the site never heard of it
+// (2026-10-08). Now every item is reported as failed — the site marks them and alerts the owner at once.
+async function reportCrash(e) {
+  console.error("✗ engine crashed before rendering:", e);
+  try {
+    await fetch(completeUrl, { method: "POST", headers: { "X-IG-Secret": SECRET, "Content-Type": "application/json" },
+      body: JSON.stringify({ brand: payload.brand, items: [], failed: payload.items.map((i) => ({ item: i.id, error: "engine crashed: " + String(e?.message || e).slice(0, 250) })) }) });
+  } catch (err) { console.error("render-complete unreachable:", err.message); }
+  process.exit(1);
+}
+let browser, page;
+try {
+  browser = await chromium.launch({ executablePath: exe && fs.existsSync(exe) ? exe : undefined });
+  page = await browser.newPage();
+  await page.goto(base + "/studio/host.html");
+  await page.evaluate(() => window.ready);
+} catch (e) { await reportCrash(e); }
 
 async function still(kind, card, file) {
   const dataUrl = await page.evaluate(([k, c]) => window.renderCard(k, c, 0.92), [kind, card]);
