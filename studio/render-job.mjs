@@ -53,7 +53,29 @@ try {
   await page.evaluate(() => window.ready);
 } catch (e) { await reportCrash(e); }
 
+// Image bank photos come as https://dubilook.com/media/… URLs. The canvas page is on 127.0.0.1, so a cross-origin
+// image would taint the canvas: download it here and hand the page a data: URL instead (cached per URL).
+const photoCache = new Map();
+async function photoData(url) {
+  if (!url || typeof url !== "string" || !/^https?:/.test(url)) return null;
+  if (photoCache.has(url)) return photoCache.get(url);
+  let out = null;
+  for (let attempt = 0; attempt < 3 && !out; attempt++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) out = "data:image/jpeg;base64," + Buffer.from(await r.arrayBuffer()).toString("base64");
+    } catch (e) { console.warn("! photo", url, e.message); }
+    if (!out) await new Promise((res) => setTimeout(res, 5000));
+  }
+  photoCache.set(url, out);
+  return out;
+}
 async function still(kind, card, file) {
+  if (card.photo) {
+    const data = await photoData(card.photo);
+    if (data) { card = { ...card, photo: data }; await page.evaluate((u) => window.DUBILOOK_POSTS.photo(u), data); }
+    else { const { photo, ...rest } = card; card = rest; console.warn("! photo unavailable — classic card"); }
+  }
   const dataUrl = await page.evaluate(([k, c]) => window.renderCard(k, c, 0.92), [kind, card]);
   fs.writeFileSync(file, Buffer.from(dataUrl.split(",")[1], "base64"));
 }
@@ -76,7 +98,9 @@ async function upload(itemId, position, kind, file, meta = {}) {
     await new Promise((res) => setTimeout(res, wait * 1000));
   }
 }
-const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline: d.headline, red: d.red || [], summary: d.summary, angle: d.angle || "", source: d.source, date: d.date });
+const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline: d.headline, red: d.red || [], summary: d.summary, angle: d.angle || "", source: d.source, date: d.date, label: d.label });
+// image bank fields (site ImageBank): photo URL (or false = decided: no photo), credit line, layout panel|bar|overlay
+const photoOf = (d) => (d.photo ? { photo: d.photo, photo_credit: d.photo_credit || "", layout: d.layout } : {});
 
 const done = [], failed = [];
 for (const it of payload.items) {
@@ -126,13 +150,13 @@ for (const it of payload.items) {
         if (fs.existsSync(f("tg.jpg"))) await upload(it.id, 20, "image", f("tg.jpg"), { variant: "telegram" });
         break;
       case "image":
-        await still("post", cardOf(d), f("0.jpg"));
+        await still("post", { ...cardOf(d), ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
         break;
       case "carousel": {
         const slides = d.slides || [];
         const of = slides.length + 2;
-        await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of }, f("0.jpg"));
+        await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
         for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
         await still("post", { type: "cta", text: d.cta, slide: { n: of, of } }, f(`${of - 1}.jpg`));
@@ -149,6 +173,11 @@ for (const it of payload.items) {
         if (r.status) throw new Error("build-reel failed");
         const audio = fs.existsSync(f("0.audio.json")) ? JSON.parse(fs.readFileSync(f("0.audio.json"), "utf8")) : {};
         await upload(it.id, 0, "video", out, { audio: audio.audio || null, trial: !!d.trial });
+        // reel cover (grid + Reels tab): the hook over the bank photo — sent as variant "cover", used only as cover_url
+        if (d.photo) {
+          await still("post-story", { type: "reel-cover", title: d.hook || d.headline || "", label: d.kicker || "NEWS", ...photoOf(d) }, f("cover.jpg"));
+          await upload(it.id, 21, "image", f("cover.jpg"), { variant: "cover" });
+        }
         break;
       }
       default: throw new Error("unknown format " + it.format);

@@ -252,12 +252,24 @@
     }
   }
 
+  // label: white text on a red pill (owner 2026-10-09: the small red text was unreadable)
   function kicker(ctx, text, y) {
-    ctx.font = font(800, 26);
-    ctx.fillStyle = RED;
     ctx.textBaseline = "alphabetic";
-    spaced(ctx, text, W / 2, y, 7, "center");
+    ctx.font = font(800, 30);
+    let w = 0; [...text].forEach((c, i) => { w += ctx.measureText(c).width + (i < text.length - 1 ? 6 : 0); });
+    const ph = 58, pw = w + 60, px = (W - pw) / 2, py = y - 42;
+    ctx.fillStyle = RED; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 29); else ctx.rect(px, py, pw, ph); ctx.fill();
+    ctx.fillStyle = WHITE; spaced(ctx, text, W / 2, py + 40, 6, "center");
   }
+
+  // Headline fonts in order (owner 2026-10-09): Anton while it fits comfortably, then Barlow Condensed, then an airy Anton (more line gap, no outline).
+  // The fallbacks are used only when the page has loaded them (studio host); otherwise Anton as before.
+  const HEAD_FONTS = [
+    { css: (s) => "400 " + s + "px Anton, Impact, 'Arial Narrow', sans-serif", lh: 1.07, stroke: 0.028, space: 0.8, min: 120, fam: "Anton" },
+    { css: (s) => "800 " + s + "px 'Barlow Condensed', 'Arial Narrow', sans-serif", lh: 1.06, stroke: 0, space: 1, min: 96, fam: "Barlow Condensed", w: 800 },
+    { css: (s) => "400 " + s + "px Anton, Impact, 'Arial Narrow', sans-serif", lh: 1.16, stroke: 0, space: 0.9, min: 0, fam: "Anton" },   // "airy" Anton
+  ];
+  const fontReady = (f) => { try { return !f.w || document.fonts.check(f.w + " 40px '" + f.fam + "'"); } catch (e) { return false; } };
 
   // headline block, centred in [top, bottom]; returns its bottom y
   function headline(ctx, text, red, top, bottom, summary) {
@@ -266,33 +278,41 @@
     const words = text.split(/\s+/);
     const mask = redMask(words, red);
 
-    let size = 300, lines, lh, sumLines = [], sumSize = 40, sumLH, blockH;
-    for (; size >= 58; size -= 2) {
-      ctx.font = heavy(size);
-      lines = balanced(ctx, text, maxW);
-      lh = size * 1.07;
-      ctx.font = font(500, sumSize);
-      sumLines = summary ? balanced(ctx, summary, maxW - 60) : [];
-      sumLH = sumSize * 1.38;
-      blockH = lines.length * lh + (sumLines.length ? 56 + sumLines.length * sumLH : 0);
-      if (lines.length <= 5 && blockH <= bottom - top) break;
+    let size, lines, lh, sumLines = [], sumSize = 40, sumLH = sumSize * 1.38, blockH, F;
+    const fit = (f) => {
+      let r = null;
+      for (let sz = 300; sz >= 58; sz -= 2) {
+        ctx.font = f.css(sz); const ls = balanced(ctx, text, maxW), l = sz * f.lh;
+        ctx.font = font(500, sumSize); const su = summary ? balanced(ctx, summary, maxW - 60) : [];
+        const bh = ls.length * l + (su.length ? 56 + su.length * sumLH : 0);
+        r = { size: sz, lines: ls, lh: l, sumLines: su, blockH: bh, F: f };
+        if (ls.length <= 5 && bh <= bottom - top) break;
+      }
+      return r;
+    };
+    let best = null;
+    for (const f of HEAD_FONTS.filter(fontReady)) {
+      const r = fit(f);
+      if (r.size >= f.min) { best = r; break; }   // big enough in this font → use it
+      best = r;
     }
+    ({ size, lines, lh, sumLines, blockH, F } = best);
 
     let y = top + (bottom - top - blockH) / 2 + size * 0.95;
     ctx.textBaseline = "alphabetic";
     let wi = 0;
     lines.forEach((ln) => {
-      ctx.font = heavy(size);
+      ctx.font = F.css(size);
       const lw = ln.split(" ");
-      const sp = ctx.measureText(" ").width * 0.8;
+      const sp = ctx.measureText(" ").width * F.space;
       const total = lw.reduce((a, w) => a + ctx.measureText(w).width, 0) + sp * (lw.length - 1);
       let x = (W - total) / 2;
       lw.forEach((wd) => {
         ctx.fillStyle = mask[wi] ? RED : WHITE;
         ctx.strokeStyle = ctx.fillStyle;
-        ctx.lineWidth = size * 0.028;           // thickens Anton a notch
+        ctx.lineWidth = size * F.stroke;        // thickens Anton a notch
         ctx.lineJoin = "miter";
-        ctx.strokeText(wd, x, y);
+        if (F.stroke > 0) ctx.strokeText(wd, x, y);
         ctx.fillText(wd, x, y);
         x += ctx.measureText(wd).width + sp;
         wi++;

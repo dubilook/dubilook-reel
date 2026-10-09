@@ -167,10 +167,14 @@
     ctx.font = latin(600, 16); ctx.fillText("™", x + ww + 4, y - 28);
   }
 
+  // label: white text on a red pill (owner 2026-10-09, same as the English cards)
   function kicker(ctx, text, y, size) {
     rtl(ctx, true);
-    ctx.font = ar(800, size || 34); ctx.fillStyle = RED; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(text, W / 2, y);
+    size = size || 34;
+    ctx.font = ar(800, size); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    const ph = Math.round(size * 1.75), pw = ctx.measureText(text).width + 64, px = (W - pw) / 2, py = y - size * 1.2;
+    ctx.fillStyle = RED; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2); else ctx.rect(px, py, pw, ph); ctx.fill();
+    ctx.fillStyle = WHITE; ctx.fillText(text, W / 2, py + ph * 0.66);
   }
 
   // headline + summary, centred vertically in [top, bottom]
