@@ -79,6 +79,30 @@ async function still(kind, card, file) {
   const dataUrl = await page.evaluate(([k, c]) => window.renderCard(k, c, 0.92), [kind, card]);
   fs.writeFileSync(file, Buffer.from(dataUrl.split(",")[1], "base64"));
 }
+// Owner 2026-10-10 (sample C): the owner's logo motion (assets/logo-end-dark.mp4, 2.5× speed, 4.13 s) replaces the
+// reel's built-in end card (scene 6 starts at 21.4 s in reel.html). 0.4 s cross-fade; the reel's own music keeps
+// playing under the logo and fades out in the last second. Any ffmpeg problem keeps the original reel.
+const REEL_END_CUT = 21.4, XFADE = 0.4;
+function appendLogoEnd(file, d) {
+  const logo = path.join(ROOT, "assets", d.logo_end === "light" ? "logo-end-light.mp4" : "logo-end-dark.mp4");
+  if (d.logo_end === false || !fs.existsSync(logo)) return false;
+  const pr = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", logo], { encoding: "utf8" });
+  const L = parseFloat(pr.stdout) || 4.134;
+  const off = REEL_END_CUT - XFADE, total = (off + L).toFixed(3);
+  const tmp = file.replace(/\.mp4$/, "-end.mp4");
+  const p = spawnSync("ffmpeg", ["-y", "-loglevel", "error", "-i", file, "-i", logo, "-filter_complex",
+    `[0:v]trim=0:${REEL_END_CUT},setpts=PTS-STARTPTS,fps=30,settb=1/30,format=yuv420p,setsar=1[a];` +
+    `[1:v]setpts=PTS-STARTPTS,fps=30,settb=1/30,format=yuv420p,setsar=1[b];` +
+    `[a][b]xfade=transition=fade:duration=${XFADE}:offset=${off}[v];` +
+    `[0:a]apad,atrim=0:${total},afade=t=out:st=${(total - 1).toFixed(3)}:d=1[au]`,
+    "-map", "[v]", "-map", "[au]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+    "-c:a", "aac", "-ar", "48000", "-b:a", "160k", "-movflags", "+faststart", tmp], { stdio: "inherit" });
+  if (p.status || !fs.existsSync(tmp)) { console.warn("! logo end card failed — the reel keeps its own ending"); return false; }
+  fs.renameSync(tmp, file);
+  console.log(`  + logo end card (${L.toFixed(2)} s), reel now ${total} s`);
+  return true;
+}
+
 async function upload(itemId, position, kind, file, meta = {}) {
   const fd = new FormData();
   fd.append("item", String(itemId)); fd.append("position", String(position)); fd.append("kind", kind); fd.append("meta", JSON.stringify(meta));
@@ -171,6 +195,7 @@ for (const it of payload.items) {
         const out = f("0.mp4");
         const r = spawnSync("node", [path.join(ROOT, "studio/build-reel.mjs"), miniFile, "reel", out, "--workers", "2"], { stdio: "inherit" });
         if (r.status) throw new Error("build-reel failed");
+        appendLogoEnd(out, d);
         const audio = fs.existsSync(f("0.audio.json")) ? JSON.parse(fs.readFileSync(f("0.audio.json"), "utf8")) : {};
         await upload(it.id, 0, "video", out, { audio: audio.audio || null, trial: !!d.trial });
         // reel cover (grid + Reels tab): the hook over the bank photo — sent as variant "cover", used only as cover_url
