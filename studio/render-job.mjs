@@ -126,6 +126,21 @@ const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline:
 // image bank fields (site ImageBank): photo URL (or false = decided: no photo), credit line, layout panel|bar|overlay
 const photoOf = (d) => (d.photo ? { photo: d.photo, photo_credit: d.photo_credit || "", layout: d.layout } : {});
 
+// 2026-10-12: the story that announces a reel had hooks:[] → empty screen. Take the reel's number, its sub line and its
+// photo from the parent item (same payload; the site may also send stat/sub/photo itself, which wins).
+const byId = new Map((payload.items || []).map((i) => [i.id, i]));
+function coverExtras(d) {
+  const p = d.parent_id ? byId.get(d.parent_id) : null, r = (p && p.data) || {};
+  const out = {
+    stat: d.stat ?? (p && p.format === "reel" ? r.statValue ?? null : null),
+    statLabel: d.statLabel ?? (p && p.format === "reel" ? r.statLabelShort || r.statUnit || "" : ""),
+    sub: d.sub ?? (p && p.format === "reel" ? r.sub || "" : ""),
+  };
+  const ph = d.photo ? d : (r.photo ? r : null);
+  if (ph) Object.assign(out, { photo: ph.photo, photo_credit: ph.photo_credit || "" });
+  return out;
+}
+
 const done = [], failed = [];
 for (const it of payload.items) {
   try {
@@ -164,7 +179,7 @@ for (const it of payload.items) {
     }
     switch (it.format) {
       case "story":
-        if (it.template === "story-cover") { await still("post-story", { type: "story-cover", title: d.title, hooks: d.hooks || [], label: d.label || "NEW POST" }, f("0.jpg")); }
+        if (it.template === "story-cover") { await still("post-story", { type: "story-cover", title: d.title, hooks: d.hooks || [], label: d.label || "NEW POST", ...coverExtras(d) }, f("0.jpg")); }
         else {
           await still("story", cardOf(d), f("0.jpg"));
           // a 9:16 story card is tiny in a Telegram feed — give the channel the 4:5 post card of the same news

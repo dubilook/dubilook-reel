@@ -15,7 +15,9 @@
 //            = "cta"                      — carousel last slide
 //              { text, slide:{n, of} }
 //            = "story-cover"              — 9:16 story that announces a new post
-//              { title, hooks:[..], label }
+//              { title, hooks:[..], label, stat?, statLabel?, sub?, photo? }
+//              2026-10-12: a reel's story had hooks:[] and the middle of the screen stayed empty —
+//              now stat + sub of the reel fill it, or the title alone is centred and enlarged.
 // ═══════════════════════════════════════════════════════════════
 (function () {
   "use strict";
@@ -421,6 +423,17 @@
     photoCredit(ctx, card);
   }
 
+  // 20000 → "20,000"; 125000000000 → "125 BILLION" (same rule as reel.html BIGNUM)
+  function statText(v) {
+    if (v === null || v === undefined || v === "" || v === false) return "";
+    const n = Number(String(v).replace(/,/g, ""));
+    if (!isFinite(n)) return String(v).toUpperCase();
+    const t = (x) => (Math.round(x * 10) / 10).toString();
+    if (Math.abs(n) >= 1e9) return t(n / 1e9) + " BILLION";
+    if (Math.abs(n) >= 1e6) return t(n / 1e6) + " MILLION";
+    return n.toLocaleString("en-US");
+  }
+
   function drawCover(ctx, card, storyLabel) {
     background(ctx);
     if (card.photo && PHOTOS[card.photo]) photoLayer(ctx, PHOTOS[card.photo], "full");
@@ -443,26 +456,77 @@
     tl.forEach((ln) => { ctx.lineWidth = size * 0.028; ctx.strokeStyle = WHITE; ctx.strokeText(ln, W / 2, y); ctx.fillText(ln, W / 2, y); y += size * 1.05; });
     ctx.textAlign = "left";
 
-    // numbered hooks
+    // numbered hooks (wrapped to 2 lines instead of shrinking off the card)
     y += 30;
-    const hooks = (card.hooks || []).slice(0, 3);
+    const hooks = (card.hooks || []).filter((h) => String(h || "").trim()).slice(0, 3);
+    const fy = H > 1400 ? H - 420 : H - 90;
     const rowH = H > 1400 ? 170 : 150;
     hooks.forEach((h, i) => {
-      const ry = y + i * rowH;
+      const ry = y + i * rowH, bh = rowH - 24, tw = W - 2 * M - 150;
       ctx.fillStyle = card.photo ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.06)";
-      ctx.fillRect(M, ry, W - 2 * M, rowH - 24);
-      ctx.fillStyle = RED; ctx.fillRect(M, ry, 8, rowH - 24);
+      ctx.fillRect(M, ry, W - 2 * M, bh);
+      ctx.fillStyle = RED; ctx.fillRect(M, ry, 8, bh);
       ctx.font = heavy(64); ctx.fillStyle = RED; ctx.textBaseline = "middle";
-      ctx.fillText(String(i + 1), M + 40, ry + (rowH - 24) / 2 + 4);
-      let fs = 52; ctx.font = heavy(fs);
+      ctx.fillText(String(i + 1), M + 40, ry + bh / 2 + 4);
       const txt = String(h).toUpperCase();
-      while (ctx.measureText(txt).width > W - 2 * M - 150 && fs > 30) { fs -= 2; ctx.font = heavy(fs); }
-      ctx.fillStyle = WHITE; ctx.fillText(txt, M + 120, ry + (rowH - 24) / 2 + 4);
+      let fs = 52, ls; ctx.font = heavy(fs); ls = [txt];
+      while (ctx.measureText(txt).width > tw && fs > 40) { fs -= 2; ctx.font = heavy(fs); }
+      if (ctx.measureText(txt).width > tw) {
+        fs = 46; ctx.font = heavy(fs); ls = balanced(ctx, txt, tw);
+        while ((ls.length > 2 || ls.some((l) => ctx.measureText(l).width > tw)) && fs > 28) { fs -= 2; ctx.font = heavy(fs); ls = balanced(ctx, txt, tw); }
+      }
+      ctx.fillStyle = WHITE;
+      const lh = fs * 1.05, y0 = ry + bh / 2 + 4 - (ls.length - 1) * lh / 2;
+      ls.forEach((ln, k) => ctx.fillText(ln, M + 120, y0 + k * lh));
       ctx.textBaseline = "alphabetic";
     });
 
+    // story without hooks (a reel's story): fill the middle with the reel's number + one line, never leave it empty
+    if (storyLabel && !hooks.length) {
+      const stat = statText(card.stat), sub = String(card.sub || "").trim(), slab = String(card.statLabel || "").trim().toUpperCase();
+      const top0 = y, bot0 = fy - 70;
+      let blocks = [], hTot = 0;
+      if (stat) {
+        let ss = 230; ctx.font = heavy(ss);
+        while (ctx.measureText(stat).width > W - 2 * M && ss > 110) { ss -= 6; ctx.font = heavy(ss); }
+        blocks.push({ kind: "stat", text: stat, size: ss, h: ss * 0.92 }); hTot += ss * 0.92;
+        if (slab) { blocks.push({ kind: "slab", text: slab, h: 64 }); hTot += 64; }
+      }
+      if (sub) {
+        ctx.font = font(600, 42); let sl = wrap(ctx, sub, W - 2 * M - 40), sfs = 42;
+        while (sl.length > 4 && sfs > 32) { sfs -= 2; ctx.font = font(600, sfs); sl = wrap(ctx, sub, W - 2 * M - 40); }
+        sl = sl.slice(0, 4);
+        const gap = stat ? 60 : 0;
+        blocks.push({ kind: "sub", lines: sl, size: sfs, gap, h: gap + sl.length * sfs * 1.35 }); hTot += gap + sl.length * sfs * 1.35;
+      }
+      if (blocks.length && hTot <= bot0 - top0) {
+        let by = top0 + (bot0 - top0 - hTot) / 2;
+        ctx.textAlign = "center";
+        blocks.forEach((bk) => {
+          if (bk.kind === "stat") { ctx.font = heavy(bk.size); ctx.fillStyle = RED; ctx.strokeStyle = RED; ctx.lineWidth = bk.size * 0.02;
+            ctx.strokeText(bk.text, W / 2, by + bk.size * 0.86); ctx.fillText(bk.text, W / 2, by + bk.size * 0.86); }
+          else if (bk.kind === "slab") { ctx.font = font(800, 34); ctx.fillStyle = WHITE; spaced(ctx, bk.text, W / 2, by + 46, 6, "center"); }
+          else { ctx.font = font(600, bk.size); ctx.fillStyle = "#e6e6e6";
+            bk.lines.forEach((ln, k) => ctx.fillText(ln, W / 2, by + bk.gap + bk.size * 1.0 + k * bk.size * 1.35)); }
+          by += bk.h;
+        });
+        ctx.textAlign = "left";
+      } else if (!blocks.length) {
+        // nothing else to show: redraw the title larger and centred in the free space
+        background(ctx);
+        if (card.photo && PHOTOS[card.photo]) photoLayer(ctx, PHOTOS[card.photo], "full");
+        brandRow(ctx, top); kicker(ctx, storyLabel, cy0);
+        let bs = 190; ctx.font = heavy(bs); let bl = balanced(ctx, title, W - 2 * M);
+        while ((bl.length > 4 || bl.some((l) => ctx.measureText(l).width > W - 2 * M)) && bs > 80) { bs -= 4; ctx.font = heavy(bs); bl = balanced(ctx, title, W - 2 * M); }
+        const th = bl.length * bs * 1.05, t0 = cy0 + 40, t1 = fy - 70;
+        let ty = t0 + Math.max(0, (t1 - t0 - th) / 2) + bs * 0.95;
+        ctx.fillStyle = WHITE; ctx.textAlign = "center";
+        bl.forEach((ln) => { ctx.lineWidth = bs * 0.028; ctx.strokeStyle = WHITE; ctx.strokeText(ln, W / 2, ty); ctx.fillText(ln, W / 2, ty); ty += bs * 1.05; });
+        ctx.textAlign = "left";
+      }
+    }
+
     // swipe cue / footer
-    const fy = H > 1400 ? H - 420 : H - 90;
     ctx.font = font(800, 26); ctx.fillStyle = "#d2d2d2";
     spaced(ctx, storyLabel ? "SEE THE NEW POST ON OUR PAGE" : "SWIPE FOR DETAILS  →", W / 2, fy, 6, "center");
     if (A.logo && H > 1400) {
