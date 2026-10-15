@@ -287,17 +287,16 @@
     photoCredit(ctx, card);
   }
 
-  // compact horizontal brand row: lens + Dubilook™
+  // the OFFICIAL logo (owner 2026-10-15 [stated]: no more simplified lens + typed word), centred on the old row
+  // (~74 px high on a 1080 post); white wordmark on dark grounds, dark wordmark when a photo card's panel is light
+  // (T.light); the artwork carries no ™, so it is drawn once beside it
   function brandRow(ctx, y, T) {
-    ctx.textBaseline = "alphabetic";
-    ctx.font = heavy(46);
-    const word = "Dubilook", ww = ctx.measureText(word).width;
-    const lw = A.lens ? 58 : 0, lh = A.lens ? A.lens.height * (lw / A.lens.width) : 0;
-    const total = lw + (lw ? 16 : 0) + ww + 22;
-    let x = (W - total) / 2;
-    if (A.lens) { ctx.drawImage(A.lens, x, y - lh + 8, lw, lh); x += lw + 16; }
-    ctx.fillStyle = T ? rgb(T.ink) : WHITE; ctx.textAlign = "left"; ctx.fillText(word, x, y);
-    ctx.font = font(600, 16); ctx.fillText("™", x + ww + 4, y - 28);
+    const img = (T && T.light && A.brandLight) ? A.brandLight : A.brandDark;
+    if (!img) return y;
+    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    ctx.drawImage(img, x, top, w, h);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = T ? rgb(T.ink) : WHITE;
+    ctx.font = font(600, 16); ctx.fillText("™", x + w + 6, top + 14);
     return y;
   }
   function slideTag(ctx, slide, y) {
@@ -529,9 +528,9 @@
     // swipe cue / footer
     ctx.font = font(800, 26); ctx.fillStyle = "#d2d2d2";
     spaced(ctx, storyLabel ? "SEE THE NEW POST ON OUR PAGE" : "SWIPE FOR DETAILS  →", W / 2, fy, 6, "center");
-    if (A.logo && H > 1400) {
-      const w = 230, h = A.logo.height * (w / A.logo.width);
-      ctx.drawImage(A.logo, (W - w) / 2, H - 340 - h + 6, w, h);
+    if (A.brandDark && H > 1400) {
+      const w = 230, h = A.brandDark.height * (w / A.brandDark.width);
+      ctx.drawImage(A.brandDark, (W - w) / 2, H - 340 - h + 6, w, h);
     }
     photoCredit(ctx, card);
   }
@@ -561,7 +560,7 @@
     ctx.fillStyle = "#8a8a8a"; ctx.font = font(500, 28);
     ctx.fillText("Join the community on Telegram · link in bio", W / 2, y);
     ctx.textAlign = "left";
-    if (A.logo) { const w = 230, h = A.logo.height * (w / A.logo.width); ctx.drawImage(A.logo, (W - w) / 2, H - 70 - h, w, h); }
+    if (A.brandDark) { const w = 230, h = A.brandDark.height * (w / A.brandDark.width); ctx.drawImage(A.brandDark, (W - w) / 2, H - 70 - h, w, h); }
   }
 
   function loadImg(url) {
@@ -583,8 +582,10 @@
     async init(src) {
       await loadFonts(src);
       A.lens = await loadImg((src && src["logo-lens"]) || "assets/logo-lens.png");
-      A.logo = await loadImg((src && src["logo-light"]) || "assets/logo-light.png");
-      return { lens: !!A.lens, logo: !!A.logo };
+      // official logo files (brand/Dubilook-logo-dark-bg.png = white wordmark for dark grounds), trimmed, 2026-10-15
+      A.brandDark = await loadImg((src && src["logo-dark-bg"]) || "assets/logo-dark-bg.png");
+    A.brandLight = await loadImg((src && src["logo-light-bg"]) || "assets/logo-light-bg.png");
+      return { lens: !!A.lens, logo: !!A.brandDark };
     },
     // preload a bank photo (same-origin URL or data: URL) before draw(); returns true when usable
     async photo(url) { if (!url) return false; if (!PHOTOS[url]) PHOTOS[url] = await loadImg(url); return !!PHOTOS[url]; },

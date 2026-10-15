@@ -142,29 +142,31 @@
   }
 
   // ── brand (Latin, unchanged) ────────────────────────────────
+  // the OFFICIAL logo (owner 2026-10-15 [stated]) in the span the lens + wordmark used to fill (y … y+186); ™ once beside it
   function brandStack(ctx, y) {
     rtl(ctx, false);
-    let yy = y;
-    if (A.lens) { const w = 124, h = A.lens.height * (w / A.lens.width); ctx.drawImage(A.lens, (W - w) / 2, yy, w, h); yy += h + 62; }
-    ctx.textBaseline = "alphabetic"; ctx.font = anton(76); ctx.fillStyle = WHITE; ctx.textAlign = "center";
-    ctx.fillText("Dubilook", W / 2 - 14, yy);
-    const ww = ctx.measureText("Dubilook").width;
-    ctx.font = latin(600, 22); ctx.fillText("™", W / 2 - 14 + ww / 2 + 16, yy - 44);
+    const yy = y + 124 + 62;                                 // where the wordmark's baseline used to be
+    if (A.brandDark) {
+      const img = A.brandDark, h = 110, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 38;
+      ctx.drawImage(img, x, top, w, h);
+      ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = WHITE;
+      ctx.font = latin(600, 22); ctx.fillText("™", x + w + 8, top + 20);
+    }
     // Arabic tagline instead of REAL INSIGHTS / A BRIGHTER VIEW
     rtl(ctx, true);
     ctx.font = ar(600, 26); ctx.fillStyle = "#9a9a9a";
     ctx.fillText("رؤى حقيقية · نظرة أوضح", W / 2, yy + 50);
     return yy + 50;
   }
+  // the OFFICIAL logo on the same row (≈74 px): the colour file on a light card (ink given), the white wordmark on dark
   function brandRow(ctx, y, ink) {
     rtl(ctx, false);
-    ctx.textBaseline = "alphabetic"; ctx.font = anton(46);
-    const word = "Dubilook", ww = ctx.measureText(word).width;
-    const lw = A.lens ? 58 : 0, lh = A.lens ? A.lens.height * (lw / A.lens.width) : 0;
-    let x = (W - (lw + (lw ? 16 : 0) + ww + 22)) / 2;
-    if (A.lens) { ctx.drawImage(A.lens, x, y - lh + 8, lw, lh); x += lw + 16; }
-    ctx.fillStyle = ink || WHITE; ctx.textAlign = "left"; ctx.fillText(word, x, y);
-    ctx.font = latin(600, 16); ctx.fillText("™", x + ww + 4, y - 28);
+    const img = ink ? A.brandLight : A.brandDark;
+    if (!img) return;
+    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    ctx.drawImage(img, x, top, w, h);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = ink || WHITE;
+    ctx.font = latin(600, 16); ctx.fillText("™", x + w + 6, top + 14);
   }
 
   // label: white text on a red pill (owner 2026-10-09, same as the English cards)
@@ -236,7 +238,7 @@
     kicker(ctx, label(card), kY, 36);
     headlineBlock(ctx, card.headline, card.red, kY + 40, H - 340 - 300, card.summary, 190, 5);
     darkFooter(ctx, card, H - 340 - 120, true);
-    if (A.logo) { rtl(ctx, false); const w = 230, h = A.logo.height * (w / A.logo.width); ctx.drawImage(A.logo, (W - w) / 2, H - 340 - h + 6, w, h); }
+    if (A.brandDark) { rtl(ctx, false); const w = 230, h = A.brandDark.height * (w / A.brandDark.width); ctx.drawImage(A.brandDark, (W - w) / 2, H - 340 - h + 6, w, h); }
   }
 
   function drawPost(ctx, card) {
@@ -314,9 +316,11 @@
     async init(src) {
       await loadFonts(src);
       A.lens = await loadImg((src && src["logo-lens"]) || "assets/logo-lens.png");
-      A.logo = await loadImg((src && src["logo-light"]) || "assets/logo-light.png");
+      // official logo files (2026-10-15): white wordmark for dark grounds, colour file for the light cards
+      A.brandDark = await loadImg((src && src["logo-dark-bg"]) || "assets/logo-dark-bg.png");
+      A.brandLight = await loadImg((src && src["logo-light-bg"]) || "assets/logo-light-bg.png");
       const ck = (f) => { try { return document.fonts.check(f, "دبي"); } catch (e) { return false; } };
-      return { lens: !!A.lens, logo: !!A.logo, cairo: ck("900 40px Cairo"), lalezar: ck("900 40px Lalezar") };
+      return { lens: !!A.lens, logo: !!A.brandDark && !!A.brandLight, cairo: ck("900 40px Cairo"), lalezar: ck("900 40px Lalezar") };
     },
     draw(ctx, card, height) {
       H = card.type === "law" ? 1350 : (height || 1350);

@@ -194,21 +194,16 @@
   }
 
   // stacked brand: lens mark, wordmark, two-line tagline
+  // the OFFICIAL logo (owner 2026-10-15 [stated]) in the span the lens + wordmark used to fill (y \u2026 y+186); \u2122 once beside it
   function brand(ctx, y, light) {
-    let yy = y;
-    if (A.lens) {
-      const w = 124, h = A.lens.height * (w / A.lens.width);
-      ctx.drawImage(A.lens, (W - w) / 2, yy, w, h);
-      yy += h + 62;
+    const img = light ? A.brandLight : A.brandDark;
+    let yy = y + 124 + 62;                                 // where the wordmark's baseline used to be
+    if (img) {
+      const h = 110, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 38;
+      ctx.drawImage(img, x, top, w, h);
+      ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = light ? "#0b0b0b" : WHITE;
+      ctx.font = font(600, 22); ctx.fillText("\u2122", x + w + 8, top + 20);
     }
-    ctx.textBaseline = "alphabetic";
-    ctx.font = heavy(76);
-    ctx.fillStyle = light ? "#0b0b0b" : WHITE;
-    ctx.textAlign = "center";
-    ctx.fillText("Dubilook", W / 2 - 14, yy);
-    const ww = ctx.measureText("Dubilook").width;
-    ctx.font = font(600, 22);
-    ctx.fillText("\u2122", W / 2 - 14 + ww / 2 + 16, yy - 44);
     ctx.textAlign = "left";
 
     ctx.font = font(500, 20);
@@ -246,9 +241,9 @@
     lines.forEach((ln, i) => ctx.fillText(ln, colX, yBase - (lines.length - 1 - i) * lh));
 
     // full wordmark logo, small, centred at the bottom
-    if (A.logo) {
-      const w = 230, h = A.logo.height * (w / A.logo.width);
-      ctx.drawImage(A.logo, (W - w) / 2, H - SAFE_BOTTOM - h + 6, w, h);
+    if (A.brandDark) {
+      const w = 230, h = A.brandDark.height * (w / A.brandDark.width);
+      ctx.drawImage(A.brandDark, (W - w) / 2, H - SAFE_BOTTOM - h + 6, w, h);
     }
   }
 
@@ -411,7 +406,10 @@
     async init(src) {
       await loadFonts(src);
       A.lens = await loadImg((src && src["logo-lens"]) || "assets/logo-lens.png");
-      A.logo = await loadImg((src && src["logo-light"]) || "assets/logo-light.png");
+      // official logo files (2026-10-15): white wordmark for the dark stories, colour file for the white divider
+      A.brandDark = await loadImg((src && src["logo-dark-bg"]) || "assets/logo-dark-bg.png");
+      A.brandLight = await loadImg((src && src["logo-light-bg"]) || "assets/logo-light-bg.png");
+      A.logo = A.brandDark;
       const ck = (f) => { try { return document.fonts.check(f); } catch (e) { return false; } };
       window.__storiesOk = { lens: !!A.lens, logo: !!A.logo, pjs: ck("800 76px PJS"), anton: ck("400 76px Anton") };
       return window.__storiesOk;

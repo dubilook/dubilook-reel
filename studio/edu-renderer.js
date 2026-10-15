@@ -77,15 +77,14 @@
     arc(-60, -60, 360, Math.PI * 0.02, Math.PI * 0.48);
     arc(W + 60, H + 60, 300, Math.PI * 1.02, Math.PI * 1.48);
   }
+  // the OFFICIAL logo (owner 2026-10-15 [stated]) — black wordmark, red lenses, on the light ground; same row, ≈74 px; ™ once beside it
   function brandRow(ctx, y) {
-    ctx.textBaseline = "alphabetic";
-    ctx.font = heavy(46);
-    const word = "Dubilook", ww = ctx.measureText(word).width;
-    const lw = A.lens ? 58 : 0, lh = A.lens ? A.lens.height * (lw / A.lens.width) : 0;
-    let x = (W - (lw + (lw ? 16 : 0) + ww + 22)) / 2;
-    if (A.lens) { ctx.drawImage(A.lens, x, y - lh + 8, lw, lh); x += lw + 16; }
-    ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.fillText(word, x, y);
-    ctx.font = font(600, 16); ctx.fillText("™", x + ww + 4, y - 28);
+    const img = A.brandLight;
+    if (!img) return;
+    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    ctx.drawImage(img, x, top, w, h);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = INK;
+    ctx.font = font(600, 16); ctx.fillText("™", x + w + 6, top + 14);
   }
   function slideTag(ctx, slide, y) {
     if (!slide) return;
@@ -277,7 +276,7 @@
     const end = bigText(ctx, c.text || "Send this to someone renting in Dubai", c.red || ["Send"], 300, 860, 160, 4);
     para(ctx, "Follow @dubilook for daily Dubai property news", end + 90, 32, "#3a3632", 600);
     para(ctx, "Join the community on Telegram · link in bio", end + 142, 28, MUTED);
-    if (A.logoInk) { const w = 230, h = A.logoInk.height * (w / A.logoInk.width); ctx.drawImage(A.logoInk, (W - w) / 2, H - 70 - h, w, h); }
+    if (A.brandLight) { const w = 230, h = A.brandLight.height * (w / A.brandLight.width); ctx.drawImage(A.brandLight, (W - w) / 2, H - 70 - h, w, h); }
   }
 
   // ── assets ──────────────────────────────────────────────────
@@ -302,9 +301,9 @@
     async init(src) {
       await loadFonts(src);
       A.lens = await loadImg((src && src["logo-lens"]) || "assets/logo-lens.png");
-      // the original colour logo (black word, red lens) — same file as dubilook.com/site-assets/dubilook-logo.png
-      A.logoInk = await loadImg((src && src["logo-dark"]) || "assets/logo-dark.png");
-      return { lens: !!A.lens, logo: !!A.logoInk };
+      // the official colour logo (brand/Dubilook-FINAL---PNG.png: black word, red lenses), trimmed — for light grounds
+      A.brandLight = await loadImg((src && src["logo-light-bg"]) || "assets/logo-light-bg.png");
+      return { lens: !!A.lens, logo: !!A.brandLight };
     },
     draw(ctx, card) {
       const fn = DRAW[card.type];
