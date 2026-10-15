@@ -81,7 +81,7 @@
   function brandRow(ctx, y) {
     const img = A.brandLight;
     if (!img) return;
-    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    const h = 60, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 53;   // owner 2026-10-16: ~20% smaller
     ctx.drawImage(img, x, top, w, h);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = INK;
     ctx.font = font(600, 16); ctx.fillText("™", x + w + 6, top + 14);
@@ -276,7 +276,7 @@
     const end = bigText(ctx, c.text || "Send this to someone renting in Dubai", c.red || ["Send"], 300, 860, 160, 4);
     para(ctx, "Follow @dubilook for daily Dubai property news", end + 90, 32, "#3a3632", 600);
     para(ctx, "Join the community on Telegram · link in bio", end + 142, 28, MUTED);
-    if (A.brandLight) { const w = 230, h = A.brandLight.height * (w / A.brandLight.width); ctx.drawImage(A.brandLight, (W - w) / 2, H - 70 - h, w, h); }
+    // owner 2026-10-16: logo only once (top) - the bottom copy was removed
   }
 
   // ── assets ──────────────────────────────────────────────────

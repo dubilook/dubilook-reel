@@ -199,7 +199,7 @@
     const img = light ? A.brandLight : A.brandDark;
     let yy = y + 124 + 62;                                 // where the wordmark's baseline used to be
     if (img) {
-      const h = 110, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 38;
+      const h = 90, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 48;   // owner 2026-10-16: ~20% smaller
       ctx.drawImage(img, x, top, w, h);
       ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = light ? "#0b0b0b" : WHITE;
       ctx.font = font(600, 22); ctx.fillText("\u2122", x + w + 8, top + 20);
@@ -241,7 +241,7 @@
     lines.forEach((ln, i) => ctx.fillText(ln, colX, yBase - (lines.length - 1 - i) * lh));
 
     // full wordmark logo, small, centred at the bottom
-    if (A.brandDark) {
+    if (false && A.brandDark) {   // owner 2026-10-16: logo only once (top)
       const w = 230, h = A.brandDark.height * (w / A.brandDark.width);
       ctx.drawImage(A.brandDark, (W - w) / 2, H - SAFE_BOTTOM - h + 6, w, h);
     }

@@ -43,7 +43,8 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
   border-radius:50%;background:#eaf6ff;
   box-shadow:0 0 8px 2px rgba(160,215,255,.95),0 0 22px 6px rgba(90,170,255,.65),
              0 0 48px 14px rgba(60,140,255,.35)}
-#logo{position:absolute;top:var(--logo-top);left:80px;width:252px;z-index:8}
+#logo{position:absolute;top:var(--logo-top);left:435px;width:210px;z-index:8}
+#logoTm{position:absolute;top:var(--logo-top);left:651px;z-index:8;color:#fff;font:600 18px/1 sans-serif}  /* owner 2026-10-16 */
 #srcline{position:absolute;bottom:var(--src-bottom);left:80px;right:80px;display:flex;justify-content:space-between;
   align-items:flex-end;font-weight:500;font-size:19px;color:#8593bb;letter-spacing:.05em;z-index:8;
   text-shadow:0 2px 14px rgba(5,7,15,.95)}
@@ -161,7 +162,7 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
   <div style="position:absolute;left:0;right:0;top:230px;height:1170px;border:3px dashed rgba(0,255,120,.65)"></div>
 </div>
 <div id="barTrack"><div id="barFill"></div><div id="barHead"></div></div>
-<img id="logo" src="assets/logo-dark-bg.png">
+<img id="logo" src="assets/logo-dark-bg.png"><span id="logoTm">™</span>
 <div id="srcline"><div>SOURCE: <b id="srcName">—</b></div><div id="srcDate">—</div></div>
 
 <!-- 1 ------------------------------------------------------------------ -->
@@ -383,7 +384,7 @@ tl.fromTo('#orbA', {x: 0, y: 0}, {x: 60, y: -40, duration: TOTAL, ease: 'none'},
   .fromTo('#orbB', {x: 0, y: 0}, {x: -50, y: 30, duration: TOTAL, ease: 'none'}, 0)
   .fromTo('#barFill', {width: '0%'}, {width: '100%', duration: TOTAL, ease: 'none'}, 0)
   .fromTo('#barHead', {left: '0%'}, {left: '100%', duration: TOTAL, ease: 'none'}, 0)
-  .from('#logo', {opacity: 0, y: -16, scale: .93, duration: .7, ease: 'power3.out'}, 0.10)
+  .from('#logo, #logoTm', {opacity: 0, y: -16, scale: .93, duration: .7, ease: 'power3.out'}, 0.10)
   .from('#srcline', {opacity: 0, duration: .7}, 0.55);
 
 /* generic scene in/out */
@@ -449,7 +450,8 @@ tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'},
 /* S6 */
 tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, 21.46)
   .to('#lens', {opacity: 0, scale: 2.6, duration: .5, ease: 'power2.in'}, 22.10)
-  .from('#endLogo', {opacity: 0, scale: .86, duration: .75, ease: 'back.out(1.6)'}, 22.24)
+  .to('#logo, #logoTm', {opacity: 0, duration: .35}, 22.0)   /* owner 2026-10-16: one logo on the end card */
+    .from('#endLogo', {opacity: 0, scale: .86, duration: .75, ease: 'back.out(1.6)'}, 22.24)
   .to('#endRule', {width: 480, duration: .7, ease: 'power3.out'}, 22.70)
   .from('#endTag', {opacity: 0, y: 20, duration: .6}, 22.92)
   .from('#endUrl', {opacity: 0, y: 16, duration: .6}, 23.14);

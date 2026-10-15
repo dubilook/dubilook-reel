@@ -147,7 +147,7 @@
     rtl(ctx, false);
     const yy = y + 124 + 62;                                 // where the wordmark's baseline used to be
     if (A.brandDark) {
-      const img = A.brandDark, h = 110, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 38;
+      const img = A.brandDark, h = 90, w = img.width * (h / img.height), x = (W - w) / 2, top = y + 48;   // owner 2026-10-16: ~20% smaller
       ctx.drawImage(img, x, top, w, h);
       ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = WHITE;
       ctx.font = latin(600, 22); ctx.fillText("™", x + w + 8, top + 20);
@@ -163,7 +163,7 @@
     rtl(ctx, false);
     const img = ink ? A.brandLight : A.brandDark;
     if (!img) return;
-    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    const h = 60, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 53;   // owner 2026-10-16: ~20% smaller
     ctx.drawImage(img, x, top, w, h);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = ink || WHITE;
     ctx.font = latin(600, 16); ctx.fillText("™", x + w + 6, top + 14);
@@ -238,7 +238,7 @@
     kicker(ctx, label(card), kY, 36);
     headlineBlock(ctx, card.headline, card.red, kY + 40, H - 340 - 300, card.summary, 190, 5);
     darkFooter(ctx, card, H - 340 - 120, true);
-    if (A.brandDark) { rtl(ctx, false); const w = 230, h = A.brandDark.height * (w / A.brandDark.width); ctx.drawImage(A.brandDark, (W - w) / 2, H - 340 - h + 6, w, h); }
+    // owner 2026-10-16: logo only once (top) - the bottom copy was removed
   }
 
   function drawPost(ctx, card) {

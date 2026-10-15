@@ -293,7 +293,7 @@
   function brandRow(ctx, y, T) {
     const img = (T && T.light && A.brandLight) ? A.brandLight : A.brandDark;
     if (!img) return y;
-    const h = 74, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 60;
+    const h = 60, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 53;   // owner 2026-10-16: ~20% smaller
     ctx.drawImage(img, x, top, w, h);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = T ? rgb(T.ink) : WHITE;
     ctx.font = font(600, 16); ctx.fillText("™", x + w + 6, top + 14);
@@ -528,7 +528,7 @@
     // swipe cue / footer
     ctx.font = font(800, 26); ctx.fillStyle = "#d2d2d2";
     spaced(ctx, storyLabel ? "SEE THE NEW POST ON OUR PAGE" : "SWIPE FOR DETAILS  →", W / 2, fy, 6, "center");
-    if (A.brandDark && H > 1400) {
+    if (false && A.brandDark && H > 1400) {   // owner 2026-10-16: logo only once (top)
       const w = 230, h = A.brandDark.height * (w / A.brandDark.width);
       ctx.drawImage(A.brandDark, (W - w) / 2, H - 340 - h + 6, w, h);
     }
@@ -560,7 +560,7 @@
     ctx.fillStyle = "#8a8a8a"; ctx.font = font(500, 28);
     ctx.fillText("Join the community on Telegram · link in bio", W / 2, y);
     ctx.textAlign = "left";
-    if (A.brandDark) { const w = 230, h = A.brandDark.height * (w / A.brandDark.width); ctx.drawImage(A.brandDark, (W - w) / 2, H - 70 - h, w, h); }
+    // owner 2026-10-16: logo only once (top) - the bottom copy was removed
   }
 
   function loadImg(url) {
