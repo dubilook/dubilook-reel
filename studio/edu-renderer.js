@@ -109,8 +109,28 @@
     ctx.save(); ctx.shadowColor = "rgba(40,30,20,0.10)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
     ctx.fillStyle = PANEL; roundRect(ctx, x, y, w, h, 28); ctx.fill(); ctx.restore();
   }
+  // keyword call-to-action (owner 2026-10-16 ~02:14 [stated]): the same red pill as the dark posts,
+  // drawn as a slim band just above the footer rule — only when the card carries dm_keyword (site: edu
+  // cards WITH a url). White text on brand red reads on the cream ground.
+  function ctaPill(ctx, keyword) {
+    const kw = String(keyword).toUpperCase();
+    const a = "COMMENT ", b = " → WE'LL DM YOU THE SOURCE";
+    ctx.textBaseline = "alphabetic";
+    const f6 = font(600, 25), f8 = font(800, 25);
+    ctx.font = f6; const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
+    ctx.font = f8; const wk = ctx.measureText(kw).width;
+    const tw = wa + wk + wb, ph = 48, pw = tw + 60, px = (W - pw) / 2, py = H - 218;
+    ctx.fillStyle = RED; ctx.beginPath(); roundRect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left";
+    let x = px + 30; const ty = py + ph * 0.67;
+    ctx.font = f6; ctx.fillText(a, x, ty); x += wa;
+    ctx.font = f8; ctx.fillText(kw, x, ty); ctx.fillRect(x, ty + 7, wk, 3); x += wk;
+    ctx.font = f6; ctx.fillText(b, x, ty);
+  }
+
   function footer(ctx, card) {
     const y = H - 70;
+    if (card.dm_keyword) ctaPill(ctx, card.dm_keyword);
     ctx.fillStyle = RULE; ctx.fillRect(M, y - 74, W - 2 * M, 2);
     ctx.textBaseline = "alphabetic";
     ctx.font = font(500, 18); ctx.fillStyle = MUTED;

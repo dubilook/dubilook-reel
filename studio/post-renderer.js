@@ -313,6 +313,29 @@
     ctx.fillStyle = RED; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, 27); else ctx.rect(px, py, pw, ph); ctx.fill();
     ctx.fillStyle = WHITE; spaced(ctx, text, W / 2, py + 37, 6, "center");
   }
+  // keyword call-to-action ON the image (owner 2026-10-16 ~02:14 [stated]): a slim red pill —
+  // "COMMENT <KEYWORD> → WE'LL DM YOU THE SOURCE", keyword heavier and underlined. Drawn only when
+  // the item carries data.dm_keyword; never over the headline, the source line or the disclaimer.
+  function ctaPill(ctx, keyword, cy, scale) {
+    const s = scale || 1, kw = String(keyword).toUpperCase();
+    const a = "COMMENT ", b = " → WE'LL DM YOU THE SOURCE";
+    ctx.textBaseline = "alphabetic";
+    const f6 = font(600, 26 * s), f8 = font(800, 26 * s);
+    ctx.font = f6; const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
+    ctx.font = f8; const wk = ctx.measureText(kw).width;
+    const tw = wa + wk + wb, ph = 50 * s, pw = tw + 64 * s, px = (W - pw) / 2, py = cy - ph / 2;
+    ctx.fillStyle = RED; ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2); else ctx.rect(px, py, pw, ph);
+    ctx.fill();
+    ctx.fillStyle = WHITE; ctx.textAlign = "left";
+    let x = px + 32 * s; const ty = py + ph * 0.67;
+    ctx.font = f6; ctx.fillText(a, x, ty); x += wa;
+    ctx.font = f8; ctx.fillText(kw, x, ty);
+    ctx.fillRect(x, ty + 8 * s, wk, 3 * s);   // underline = the "this exact word" cue
+    x += wk;
+    ctx.font = f6; ctx.fillText(b, x, ty);
+  }
+
   function headlineBlock(ctx, text, red, top, bottom, extra, T) {
     const INK = T ? rgb(T.ink) : WHITE, SUB = T ? T.sub : GREY, ANG = T ? T.sub : "#e8e8e8";
     const maxW = (T && T.maxW) || W - 2 * 72, LEFT = !!(T && T.left), REDC = (T && T.red) || RED;
@@ -416,7 +439,8 @@
       if (img) photoLayer(ctx, img, "full");
       brandRow(ctx, 118); slideTag(ctx, card.slide, 116);
       kicker(ctx, label, 206);
-      headlineBlock(ctx, card.headline, card.red, 236, footBase - 150, { summary: card.summary, angle: card.angle });
+      headlineBlock(ctx, card.headline, card.red, 236, footBase - (card.dm_keyword ? 240 : 150), { summary: card.summary, angle: card.angle });
+      if (card.dm_keyword) ctaPill(ctx, card.dm_keyword, footBase - 185);
     }
     footer(ctx, card, footBase);
     photoCredit(ctx, card);
@@ -560,6 +584,8 @@
     ctx.fillStyle = "#8a8a8a"; ctx.font = font(500, 28);
     ctx.fillText("Join the community on Telegram · link in bio", W / 2, y);
     ctx.textAlign = "left";
+    // keyword CTA on the last (CTA) slide (owner 2026-10-16 ~02:14 [stated]) — a touch larger here
+    if (card.dm_keyword) ctaPill(ctx, card.dm_keyword, Math.min(y + 110, H - 110), 1.12);
     // owner 2026-10-16: logo only once (top) - the bottom copy was removed
   }
 

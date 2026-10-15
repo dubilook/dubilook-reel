@@ -246,8 +246,31 @@
     brandRow(ctx, 118);
     kicker(ctx, label(card), 212, 32);
     const footBase = H - 70;
-    headlineBlock(ctx, card.headline, card.red, 240, footBase - 160, card.summary, 140, 4);
+    headlineBlock(ctx, card.headline, card.red, 240, footBase - (card.dm_keyword ? 250 : 160), card.summary, 140, 4);
+    if (card.dm_keyword) ctaPill(ctx, card.dm_keyword, footBase - 195);
     darkFooter(ctx, card, footBase, false);
+  }
+
+  // keyword call-to-action, Arabic (owner 2026-10-16 ~02:14 [stated]): red pill, the Latin keyword
+  // heavier + underlined inside the RTL sentence — canvas bidi places it correctly.
+  function ctaPill(ctx, keyword, cy) {
+    const kw = String(keyword).toUpperCase();
+    const a = "علّق ";                       // «علّق »
+    const b = " ونرسل لك المصدر في الخاص";  // « ونرسل لك المصدر في الخاص»
+    ctx.textBaseline = "alphabetic";
+    rtl(ctx, true); ctx.textAlign = "right";
+    const fa = ar(600, 30), fk = latin(800, 27);
+    ctx.font = fa; const wa = ctx.measureText(iso(a)).width, wb = ctx.measureText(iso(b)).width;
+    ctx.font = fk; const wk = ctx.measureText(kw).width;
+    const tw = wa + wk + wb + 16, ph = 54, pw = tw + 64, px = (W - pw) / 2, py = cy - ph / 2;
+    ctx.fillStyle = RED; ctx.beginPath(); roundRect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+    ctx.fillStyle = WHITE;
+    let xr = px + pw - 32; const ty = py + ph * 0.68;   // RTL: start at the right edge
+    ctx.font = fa; ctx.fillText(iso(a), xr, ty); xr -= wa + 8;
+    rtl(ctx, false); ctx.textAlign = "right";
+    ctx.font = fk; ctx.fillText(kw, xr, ty); ctx.fillRect(xr - wk, ty + 9, wk, 3); xr -= wk + 8;
+    rtl(ctx, true); ctx.textAlign = "right";
+    ctx.font = fa; ctx.fillText(iso(b), xr, ty);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
