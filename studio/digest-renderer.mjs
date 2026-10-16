@@ -60,7 +60,7 @@ function card(c) {
 
 function closing(d) {
   const legal = parts.legal.replace(/© \d{4} Dubilook/, `© ${esc(d.year)} Dubilook`);
-  return `<aside class="endcol"><div class="close"><h4>Get tomorrow's file too</h4><p class="lead">Comment the keyword on our 8 pm post every day and we send this file to your inbox.</p>${parts.socs}</div>
+  return `<aside class="endcol"><div class="close"><h4>Get the next file too</h4><p class="lead">Most evenings at 8 pm we post a new one (not on days with fewer than four stories). Comment its keyword and we send that file to your inbox.</p>${parts.socs}</div>
   ${legal}</aside>`;
 }
 
@@ -146,8 +146,8 @@ h1{position:absolute;left:84px;top:178px;font-family:PlexCond;font-weight:700;fo
 <h1>Dubai Property<br>Today</h1>
 <div class="date"><b>${esc(dateLabel)}</b> · ${d.cards.length} stories in one PDF</div>
 ${grid}
-<div class="pdf">Every story of today with its source link — in one file.</div>
+<div class="pdf">${d.cards.every((c) => c.source_url) ? "Today's stories with their source links" : "Today's stories"} — in one file.</div>
 <div class="pill">COMMENT <u>${kw}</u> → WE'LL DM YOU TODAY'S PDF</div>
-<div class="foot"><span>Every day at 8 pm</span><span>@dubilook</span></div>
+<div class="foot"><span>Most evenings at 8 pm</span><span>@dubilook</span></div>
 </body></html>`;
 }
