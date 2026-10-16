@@ -29,7 +29,7 @@ const samples = [
   ["07-post-news-no-kw-unchanged", "post", news],   // control: no keyword → exactly as today
 ];
 
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".ttf": "font/ttf", ".mp4": "video/mp4" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".mp4": "video/mp4" };
 const server = http.createServer((req, res) => {
   const p = path.join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
@@ -49,19 +49,38 @@ for (const [name, kind, card] of samples) {
   fs.writeFileSync(path.join(outDir, name + ".jpg"), Buffer.from(url.split(",")[1], "base64"));
   console.log("  " + name + ".jpg");
 }
-// contact sheet
-const sheet = await page.evaluate(async (names) => {
+// the reel end scene (S5, before the 21.4 s logo cut) with the keyword pill — frame at 20.5 s
+const REEL = { kicker: "UAE PROPERTY NEWS", hook: "Ejari registration goes fully digital", hookGold: "fully digital", sub: "No more typing centres for tenancy contracts",
+  statLabelShort: "contracts online", chart: null, statValue: 12000, statUnit: "contracts", statLabel: "registered online this quarter",
+  detail: "Dubai Land Department moved tenancy registration to its app; agents and landlords register a lease in minutes.",
+  takeaway: "Ask your agent to register your Ejari online — it is free and instant.",
+  question: "Would you still queue at a typing centre?", icons: [], source: "GULF NEWS", date: "16 OCT 2026", dm_keyword: "Ejari" };
+try {
+  const p2 = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
+  p2.on("pageerror", (e) => console.error("reel page error:", e.message));
+  await p2.addInitScript("window.DATA = " + JSON.stringify(REEL) + ";");
+  await p2.goto(`http://127.0.0.1:${server.address().port}/reel.html?layout=instagram`);
+  await p2.waitForFunction("window.READY === true", null, { timeout: 30000 });
+  await p2.evaluate(() => window.SEEK(20.5));
+  await p2.screenshot({ type: "jpeg", quality: 92, path: path.join(outDir, "08-reel-end-scene.jpg") });
+  console.log("  08-reel-end-scene.jpg");
+  await p2.close();
+} catch (e) { console.error("reel frame skipped:", e.message); }
+// contact sheet — the reel tile keeps its 9:16 shape inside the 4:5 cell
+const tiles = samples.map(([n]) => [n, 360]).concat([["08-reel-end-scene", Math.round(450 * 1080 / 1920)]]);
+const sheet = await page.evaluate(async (list) => {
   const c = document.createElement("canvas"); c.width = 360 * 4; c.height = 450 * 2;
   const g = c.getContext("2d"); g.fillStyle = "#ddd"; g.fillRect(0, 0, c.width, c.height);
-  for (let i = 0; i < names.length; i++) {
+  for (let i = 0; i < list.length; i++) {
+    const [src, w] = list[i];
     const img = new Image();
-    await new Promise((r) => { img.onload = r; img.src = names[i]; });
-    g.drawImage(img, (i % 4) * 360, Math.floor(i / 4) * 450, 360, 450);
+    await new Promise((r) => { img.onload = r; img.src = src; });
+    g.drawImage(img, (i % 4) * 360 + (360 - w) / 2, Math.floor(i / 4) * 450, w, 450);
   }
   return c.toDataURL("image/jpeg", 0.85);
-}, samples.map(([n]) => {
+}, tiles.map(([n, w]) => {
   const b = fs.readFileSync(path.join(outDir, n + ".jpg"));
-  return "data:image/jpeg;base64," + b.toString("base64");
+  return ["data:image/jpeg;base64," + b.toString("base64"), w];
 }));
 fs.writeFileSync(path.join(outDir, "00-contact-sheet.jpg"), Buffer.from(sheet.split(",")[1], "base64"));
 console.log("  00-contact-sheet.jpg");

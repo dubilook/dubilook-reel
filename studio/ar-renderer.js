@@ -263,6 +263,12 @@
     ctx.font = fa; const wa = ctx.measureText(iso(a)).width, wb = ctx.measureText(iso(b)).width;
     ctx.font = fk; const wk = ctx.measureText(kw).width;
     const tw = wa + wk + wb + 16, ph = 54, pw = tw + 64, px = (W - pw) / 2, py = cy - ph / 2;
+    // owner 2026-10-16 ~03:32 [stated]: the mirrored glow arcs must never run through the pill — dark halo first
+    ctx.save();
+    ctx.fillStyle = "#000"; ctx.shadowColor = "#000"; ctx.shadowBlur = 48;
+    ctx.beginPath(); roundRect(ctx, px - 14, py - 14, pw + 28, ph + 28, (ph + 28) / 2);
+    ctx.fill(); ctx.fill();
+    ctx.restore();
     ctx.fillStyle = RED; ctx.beginPath(); roundRect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
     ctx.fillStyle = WHITE;
     let xr = px + pw - 32; const ty = py + ph * 0.68;   // RTL: start at the right edge

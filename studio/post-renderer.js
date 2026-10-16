@@ -324,6 +324,14 @@
     ctx.font = f6; const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
     ctx.font = f8; const wk = ctx.measureText(kw).width;
     const tw = wa + wk + wb, ph = 50 * s, pw = tw + 64 * s, px = (W - pw) / 2, py = cy - ph / 2;
+    // owner 2026-10-16 ~03:32 [stated]: the background's glow arcs must never run through the pill —
+    // a soft ground-colour halo goes under it first, so the pill and its text are always clean
+    ctx.save();
+    ctx.fillStyle = "#000"; ctx.shadowColor = "#000"; ctx.shadowBlur = 48 * s;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s, (ph + 28 * s) / 2); else ctx.rect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s);
+    ctx.fill(); ctx.fill();   // twice: a dense core so the arc fully dims behind the pill
+    ctx.restore();
     ctx.fillStyle = RED; ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2); else ctx.rect(px, py, pw, ph);
     ctx.fill();

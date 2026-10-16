@@ -132,6 +132,12 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
 #s5 .icoTile{align-self:center}
 #s5 .q{text-shadow:0 3px 26px rgba(5,7,15,.9);font-weight:800;font-size:var(--q);line-height:1.24;letter-spacing:-.028em;max-width:860px}
 #s5 .cta{margin-top:46px;font-weight:600;font-size:29px;color:#ffdd85;letter-spacing:.04em}
+/* keyword CTA pill (owner 2026-10-16 [stated]): only when the payload carries dm_keyword; on screen
+   from ~18.9 s to the 21.4 s cut (≥2 s) — the end scene BEFORE the logo motion */
+#s5kw{display:none;margin-top:40px;align-self:center;background:#e3141c;color:#fff;border-radius:999px;
+  padding:17px 36px;font-weight:600;font-size:28px;letter-spacing:.02em;white-space:nowrap;
+  box-shadow:0 10px 40px rgba(0,0,0,.55)}
+#s5kw b{font-weight:800;text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:3px}
 
 /* ---- S6 end card ---- */
 #s6{align-items:center;justify-content:center;text-align:center}
@@ -209,6 +215,7 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
   <div class="icoTile"><img id="s5ico" src="assets/chat-two-bubbles-oval.svg"></div>
   <div class="q" id="s5txt"></div>
   <div class="cta">Tell us in the comments</div>
+  <div id="s5kw"></div>
 </section>
 
 <!-- 6 ------------------------------------------------------------------ -->
@@ -248,6 +255,13 @@ $('#s2label').textContent = D.statLabelShort || 'THE NUMBER';
 $('#s3txt').textContent   = D.detail;
 $('#s4txt').textContent   = D.takeaway;
 $('#s5txt').textContent   = D.question;
+/* keyword CTA (owner 2026-10-16 [stated]): only when the site sends dm_keyword — without it S5 is exactly as today */
+if (D.dm_keyword) {
+  const kb = document.createElement('b'); kb.textContent = String(D.dm_keyword).toUpperCase();
+  const kw = $('#s5kw');
+  kw.append('COMMENT ', kb, ' → WE’LL DM YOU THE SOURCE');
+  kw.style.display = 'block';
+}
 if (D.icons) {
   if (D.icons.stat)     $('#s2ico').src = 'assets/' + D.icons.stat + '.svg';
   if (D.icons.detail)   $('#s3ico').src = 'assets/' + D.icons.detail + '.svg';
@@ -446,6 +460,8 @@ tl.from('#s4 .icoTile', {scale: 0, rotate: 25, duration: .62, ease: 'back.out(2.
 tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'}, 18.28)
   .from('#s5txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 18.50)
   .from('#s5 .cta', {opacity: 0, y: 18, duration: .55}, 18.86);
+/* the keyword pill rides S5 from ~18.9 s to the 21.4 s logo cut — ≥2 s on screen; no keyword → no tween */
+if (D.dm_keyword) tl.from('#s5kw', {opacity: 0, y: 18, scale: .94, duration: .55, ease: 'back.out(1.8)'}, 18.98);
 
 /* S6 */
 tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, 21.46)
