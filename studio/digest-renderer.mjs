@@ -22,6 +22,13 @@ const png = (f) => "data:image/png;base64," + fs.readFileSync(A(f)).toString("ba
 const LOGO_DARK_BG = png("logo-dark-bg.png");     // white letters → navy masthead / post
 const LOGO_LIGHT_BG = png("logo-light-bg.png");   // black letters → light running heads
 
+/** "2026-10-16" → "Friday, 16 October 2026" (the digest's OWN day, never the render day). */
+export function dateLabelOf(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+  if (!m) return "";
+  const dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return dt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[c]));
 const PAGE1_CELLS = 2, PAGE_CELLS = 4;
 
@@ -101,7 +108,16 @@ ${sheets.join("\n")}
 // ── the 20:00 Instagram post (4:5, 1080×1350): "comment KEYWORD → we DM you today's PDF" ──
 // DRAFT — shown to the owner before the switch goes on (prompt 2026-10-16 small batch, PART 3).
 export function postHtml(d) {
-  const thumbs = d.cards.filter((c) => c.hero).slice(0, 3);   // three whole 4:5 cards read better than four cropped ones
+  // Owner 16 Oct 14:10 [stated]: the thumbnails are three DIFFERENT stories of the day — never one story twice (a news
+  // post and its carousel slide, its Arabic post or its reel share a `story` key); fewer distinct stories → fewer tiles.
+  const seen = new Set(), thumbs = [];
+  for (const c of d.cards) {
+    const key = c.story || c.source_url || c.headline;
+    if (!c.hero || seen.has(key)) continue;
+    seen.add(key); thumbs.push(c);
+    if (thumbs.length === 3) break;
+  }
+  const dateLabel = d.date_label || dateLabelOf(d.date);
   const kw = esc(String(d.keyword || "").toUpperCase());
   const grid = thumbs.length
     ? `<div class="thumbs n${thumbs.length}">${thumbs.map((c) => `<div class="th${c.hero_shape === "9:16" ? " tall" : ""}"><img src="${esc(c.hero)}" alt=""></div>`).join("")}</div>`
@@ -128,7 +144,7 @@ h1{position:absolute;left:84px;top:178px;font-family:PlexCond;font-weight:700;fo
 </style></head><body><div class="glow"></div>
 <div class="top"><img src="${LOGO_DARK_BG}" alt="Dubilook"><span>Evening edition</span></div>
 <h1>Dubai Property<br>Today</h1>
-<div class="date"><b>${esc(d.date_label)}</b> · ${d.cards.length} stories in one PDF</div>
+<div class="date"><b>${esc(dateLabel)}</b> · ${d.cards.length} stories in one PDF</div>
 ${grid}
 <div class="pdf">Every story of today with its source link — in one file.</div>
 <div class="pill">COMMENT <u>${kw}</u> → WE'LL DM YOU TODAY'S PDF</div>
