@@ -10,6 +10,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { digestHtml, postHtml } from "./digest-renderer.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -106,7 +107,7 @@ function appendLogoEnd(file, d) {
 async function upload(itemId, position, kind, file, meta = {}) {
   const fd = new FormData();
   fd.append("item", String(itemId)); fd.append("position", String(position)); fd.append("kind", kind); fd.append("meta", JSON.stringify(meta));
-  fd.append("file", new Blob([fs.readFileSync(file)], { type: kind === "video" ? "video/mp4" : "image/jpeg" }), path.basename(file));
+  fd.append("file", new Blob([fs.readFileSync(file)], { type: kind === "video" ? "video/mp4" : kind === "pdf" ? "application/pdf" : "image/jpeg" }), path.basename(file));
   // The site is sometimes slow; a network error or 5xx gets 4 more tries (10 s, 30 s, 60 s, 120 s apart).
   for (let attempt = 0; ; attempt++) {
     let r, err;
@@ -141,11 +142,34 @@ function coverExtras(d) {
   return out;
 }
 
+// Daily PDF digest (IG-COMMENT-DM, design approved 2026-10-15): the 20:00 post image (main file, position 0) and the
+// PDF (variant "digest-pdf", position 30 — never part of the Instagram post). Heroes are the published post images.
+async function renderDigest(it, f) {
+  const d = it.data.digest || {};
+  const cards = [];
+  for (const c of d.cards || []) cards.push({ ...c, hero: c.hero ? await photoData(c.hero) : null });
+  const data = { ...d, keyword: it.data.dm_keyword, cards };
+  const dp = await browser.newPage();
+  try {
+    await dp.goto(base + "/assets/digest/blank.html");
+    await dp.setContent(digestHtml(data), { waitUntil: "load" });
+    await dp.evaluate(() => document.fonts.ready);
+    await dp.pdf({ path: f("digest.pdf"), preferCSSPageSize: true, printBackground: true });
+    await dp.setViewportSize({ width: 1080, height: 1350 });
+    await dp.setContent(postHtml(data), { waitUntil: "load" });
+    await dp.evaluate(() => document.fonts.ready);
+    await dp.screenshot({ path: f("0.jpg"), type: "jpeg", quality: 92 });
+  } finally { await dp.close(); }
+  await upload(it.id, 0, "image", f("0.jpg"));
+  await upload(it.id, 30, "pdf", f("digest.pdf"), { variant: "digest-pdf", date: d.date, cards: cards.length });
+}
+
 const done = [], failed = [];
 for (const it of payload.items) {
   try {
     const d = it.data || {};
     const f = (n) => path.join(work, `item${it.id}-${n}`);
+    if (it.template === "post-digest") { await renderDigest(it, f); done.push(it.id); console.log(`✓ item ${it.id} (digest)`); continue; }
     // light-theme education cards (edu-renderer.js): one 4:5 image, or a checklist carousel
     if (String(it.template || "").startsWith("edu-")) {
       if (d.kind === "checklist") {
