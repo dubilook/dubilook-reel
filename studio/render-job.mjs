@@ -122,7 +122,7 @@ async function upload(itemId, position, kind, file, meta = {}) {
     await new Promise((res) => setTimeout(res, wait * 1000));
   }
 }
-const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline: d.headline, red: d.red || [], summary: d.summary, angle: d.angle || "", source: d.source, date: d.date, label: d.label });
+const cardOf = (d) => ({ type: d.type || "news", category: d.category, headline: d.headline, red: d.red || [], summary: d.summary, angle: d.angle || "", source: d.source, date: d.date, label: d.label, dm_keyword: d.dm_keyword });   // Q1: the keyword CTA pill draws only when this is set
 // image bank fields (site ImageBank): photo URL (or false = decided: no photo), credit line, layout panel|bar|overlay
 const photoOf = (d) => (d.photo ? { photo: d.photo, photo_credit: d.photo_credit || "", layout: d.layout } : {});
 
@@ -198,7 +198,7 @@ for (const it of payload.items) {
         await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
         for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
-        await still("post", { type: "cta", text: d.cta, slide: { n: of, of } }, f(`${of - 1}.jpg`));
+        await still("post", { type: "cta", text: d.cta, slide: { n: of, of }, dm_keyword: d.dm_keyword }, f(`${of - 1}.jpg`));   // Q1: keyword pill on the last slide
         await upload(it.id, of - 1, "image", f(`${of - 1}.jpg`));
         break;
       }
