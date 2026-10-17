@@ -2,7 +2,8 @@
 // is gone; a small gold tab sits flush in the top-right corner (B5-gold-68pct.jpg). Rendered through host.html
 // renderCard exactly as render-job.mjs does, for every 4:5 layout × a 3-letter and a 6-letter keyword:
 //   1. with a keyword: badge box flush top-right (x1 = 1080, y0 = 0), ~99 px high, gold #C9A24A inside
-//   2. every pixel that changes against the same card WITHOUT a keyword lies inside the badge (+ shadow) — no pill elsewhere
+//   2. every pixel that changes against the same card WITHOUT a keyword lies inside the badge (+ shadow) or the slide tag
+//      (it moves down below the badge) — no pill elsewhere
 //   3. the badge never touches the logo, slide tag, kicker, headline block, footer or bar strip (renderer boxes)
 //   4. without a keyword: no badge recorded, the corner is not gold
 //   node studio/test-keyword-badge.mjs [fixturesDir with 2 jpgs]
@@ -70,7 +71,9 @@ const run = (kind, card, kw) => page.evaluate(async ([k, c, w]) => {
     const i = (y * A.w + x) * 4;
     if (Math.abs(A.d[i] - B.d[i]) + Math.abs(A.d[i + 1] - B.d[i + 1]) + Math.abs(A.d[i + 2] - B.d[i + 2]) <= 40) continue;
     const inBadge = badge && x >= badge.x0 - pad && y <= badge.y1 + pad;
-    if (!inBadge) { outside++; if (!first) first = [x, y]; }
+    // the carousel slide tag («3 / 7») moves down below the badge — that box may change too
+    const inSlide = boxes.some((b) => b.k === "slide" && x >= b.x0 - 4 && x <= b.x1 + 4 && y >= b.y0 - 4 && y <= b.y1 + 4);
+    if (!inBadge && !inSlide) { outside++; if (!first) first = [x, y]; }
   }
   const at = (P, x, y) => { const i = (y * P.w + x) * 4; return [P.d[i], P.d[i + 1], P.d[i + 2]]; };
   const gold = badge ? at(A, badge.x0 + 10, 8) : null;

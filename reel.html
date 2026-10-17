@@ -132,12 +132,14 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
 #s5 .icoTile{align-self:center}
 #s5 .q{text-shadow:0 3px 26px rgba(5,7,15,.9);font-weight:800;font-size:var(--q);line-height:1.24;letter-spacing:-.028em;max-width:860px}
 #s5 .cta{margin-top:46px;font-weight:600;font-size:29px;color:#ffdd85;letter-spacing:.04em}
-/* keyword CTA pill (owner 2026-10-16 [stated]): only when the payload carries dm_keyword; on screen
-   from ~18.9 s to the 21.4 s cut (≥2 s) — the end scene BEFORE the logo motion */
-#s5kw{display:none;margin-top:40px;align-self:center;background:#e3141c;color:#fff;border-radius:999px;
-  padding:17px 36px;font-weight:600;font-size:28px;letter-spacing:.02em;white-space:nowrap;
-  box-shadow:0 10px 40px rgba(0,0,0,.55)}
-#s5kw b{font-weight:800;text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:3px}
+/* corner keyword badge (R68, owner 2026-10-17 [stated]; replaces the S5 pill): the gold tab of the 4:5 cards
+   (badge(0.68) of out/keyword-corner-1017/source-build3.py), flush to the right edge. Its top is the top of the
+   safe area (--bar-top: 250 px under Instagram's own header in the "instagram" layout, 0 in "full"), so the
+   Reels header never covers it. On screen ~18.9 s -> the 21.4 s logo cut; only when dm_keyword is set. */
+#kwBadge{display:none;position:absolute;right:0;top:calc(var(--bar-top) + 2px);z-index:9;background:#C9A24A;color:#0B0B0D;
+  padding:20px 29px 17px 27px;border-bottom-left-radius:27px;box-shadow:0 8px 28px rgba(0,0,0,.4);text-align:center}
+#kwBadge .s{font:800 13px/1 PJS;letter-spacing:3px;opacity:.75;margin-bottom:6px}
+#kwBadge .k{font:800 43px/1 PJS;letter-spacing:2px}
 
 /* ---- S6 end card ---- */
 #s6{align-items:center;justify-content:center;text-align:center}
@@ -215,8 +217,8 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
   <div class="icoTile"><img id="s5ico" src="assets/chat-two-bubbles-oval.svg"></div>
   <div class="q" id="s5txt"></div>
   <div class="cta">Tell us in the comments</div>
-  <div id="s5kw"></div>
 </section>
+<div id="kwBadge"><div class="s">COMMENT</div><div class="k" id="kwWord"></div></div>
 
 <!-- 6 ------------------------------------------------------------------ -->
 <section class="sc" id="s6">
@@ -255,12 +257,10 @@ $('#s2label').textContent = D.statLabelShort || 'THE NUMBER';
 $('#s3txt').textContent   = D.detail;
 $('#s4txt').textContent   = D.takeaway;
 $('#s5txt').textContent   = D.question;
-/* keyword CTA (owner 2026-10-16 [stated]): only when the site sends dm_keyword — without it S5 is exactly as today */
+/* corner keyword badge (R68): only when the site sends dm_keyword - without it S5 is exactly as before */
 if (D.dm_keyword) {
-  const kb = document.createElement('b'); kb.textContent = String(D.dm_keyword).toUpperCase();
-  const kw = $('#s5kw');
-  kw.append('COMMENT ', kb, ' → WE’LL DM YOU THE SOURCE');
-  kw.style.display = 'block';
+  $('#kwWord').textContent = String(D.dm_keyword).toUpperCase();
+  $('#kwBadge').style.display = 'block';
 }
 if (D.icons) {
   if (D.icons.stat)     $('#s2ico').src = 'assets/' + D.icons.stat + '.svg';
@@ -460,8 +460,9 @@ tl.from('#s4 .icoTile', {scale: 0, rotate: 25, duration: .62, ease: 'back.out(2.
 tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'}, 18.28)
   .from('#s5txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 18.50)
   .from('#s5 .cta', {opacity: 0, y: 18, duration: .55}, 18.86);
-/* the keyword pill rides S5 from ~18.9 s to the 21.4 s logo cut — ≥2 s on screen; no keyword → no tween */
-if (D.dm_keyword) tl.from('#s5kw', {opacity: 0, y: 18, scale: .94, duration: .55, ease: 'back.out(1.8)'}, 18.98);
+/* the corner badge rides S5 from ~18.9 s to the 21.4 s logo cut - >=2 s on screen; no keyword -> no tween */
+if (D.dm_keyword) tl.fromTo('#kwBadge', {opacity: 0, x: 40}, {opacity: 1, x: 0, duration: .5, ease: 'power3.out'}, 18.98)
+  .to('#kwBadge', {opacity: 0, duration: .3}, 21.30);
 
 /* S6 */
 tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, 21.46)

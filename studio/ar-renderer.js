@@ -23,6 +23,10 @@
   const PAPER = "#f6f3ee", INK = "#141414", MUTED = "#6e6a64", RULE = "#d9d3ca";
   const DISCLAIMER = "Dubilook™ ناقلٌ للخبر فقط. المعلومات منسوبة إلى المصدر المذكور، ولا تتبنّاها Dubilook™ بشكل مستقل.";
   const MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  // layout boxes of the last draw() (R68): brand / slide / kicker / head / foot — read by studio/test-keyword-badge.mjs.
+  // host.html draws the corner keyword badge after draw(); while the card carries dm_keyword the slide tag moves down.
+  let BOX = [], KW = false;
+  const box = (k, y0, y1, x0, x1) => BOX.push({ k, y0: Math.round(y0), y1: Math.round(y1), x0: Math.round(x0 ?? 0), x1: Math.round(x1 ?? W) });
   const A = {};
   let HEAD = "Lalezar";
 
@@ -164,7 +168,7 @@
     const img = ink ? A.brandLight : A.brandDark;
     if (!img) return;
     const h = 60, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 53;   // owner 2026-10-16: ~20% smaller
-    ctx.drawImage(img, x, top, w, h);
+    ctx.drawImage(img, x, top, w, h); box("brand", top, top + h, x, x + w + 24);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = ink || WHITE;
     ctx.font = latin(600, 16); ctx.fillText("™", x + w + 6, top + 14);
   }
@@ -175,6 +179,7 @@
     size = size || 34;
     ctx.font = ar(800, size); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
     const ph = Math.round(size * 1.75), pw = ctx.measureText(text).width + 64, px = (W - pw) / 2, py = y - size * 1.2;
+    box("kicker", py, py + ph, px, px + pw);
     ctx.fillStyle = RED; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2); else ctx.rect(px, py, pw, ph); ctx.fill();
     ctx.fillStyle = WHITE; ctx.fillText(text, W / 2, py + ph * 0.66);
   }
@@ -246,37 +251,10 @@
     brandRow(ctx, 118);
     kicker(ctx, label(card), 212, 32);
     const footBase = H - 70;
-    headlineBlock(ctx, card.headline, card.red, 240, footBase - (card.dm_keyword ? 250 : 160), card.summary, 140, 4);
-    if (card.dm_keyword) ctaPill(ctx, card.dm_keyword, footBase - 195);
+    headlineBlock(ctx, card.headline, card.red, 240, footBase - 160, card.summary, 140, 4);
+    box("head", 240, footBase - 160);
     darkFooter(ctx, card, footBase, false);
-  }
-
-  // keyword call-to-action, Arabic (owner 2026-10-16 ~02:14 [stated]): red pill, the Latin keyword
-  // heavier + underlined inside the RTL sentence — canvas bidi places it correctly.
-  function ctaPill(ctx, keyword, cy) {
-    const kw = String(keyword).toUpperCase();
-    const a = "علّق ";                       // «علّق »
-    const b = " ونرسل لك المصدر في الخاص";  // « ونرسل لك المصدر في الخاص»
-    ctx.textBaseline = "alphabetic";
-    rtl(ctx, true); ctx.textAlign = "right";
-    const fa = ar(600, 30), fk = latin(800, 27);
-    ctx.font = fa; const wa = ctx.measureText(iso(a)).width, wb = ctx.measureText(iso(b)).width;
-    ctx.font = fk; const wk = ctx.measureText(kw).width;
-    const tw = wa + wk + wb + 16, ph = 54, pw = tw + 64, px = (W - pw) / 2, py = cy - ph / 2;
-    // owner 2026-10-16 ~03:32 [stated]: the mirrored glow arcs must never run through the pill — dark halo first
-    ctx.save();
-    ctx.fillStyle = "#000"; ctx.shadowColor = "#000"; ctx.shadowBlur = 48;
-    ctx.beginPath(); roundRect(ctx, px - 14, py - 14, pw + 28, ph + 28, (ph + 28) / 2);
-    ctx.fill(); ctx.fill();
-    ctx.restore();
-    ctx.fillStyle = RED; ctx.beginPath(); roundRect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
-    ctx.fillStyle = WHITE;
-    let xr = px + pw - 32; const ty = py + ph * 0.68;   // RTL: start at the right edge
-    ctx.font = fa; ctx.fillText(iso(a), xr, ty); xr -= wa + 8;
-    rtl(ctx, false); ctx.textAlign = "right";
-    ctx.font = fk; ctx.fillText(kw, xr, ty); ctx.fillRect(xr - wk, ty + 9, wk, 3); xr -= wk + 8;
-    rtl(ctx, true); ctx.textAlign = "right";
-    ctx.font = fa; ctx.fillText(iso(b), xr, ty);
+    box("foot", footBase - 120, footBase + 8);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -354,11 +332,13 @@
     draw(ctx, card, height) {
       H = card.type === "law" ? 1350 : (height || 1350);
       HEAD = card.font === "cairo" ? "Cairo" : "Lalezar";
+      BOX = []; KW = !!card.dm_keyword && H === 1350;
       ctx.save();
       if (card.type === "law") drawLaw(ctx, card);
       else if (H > 1400) drawStory(ctx, card);
       else drawPost(ctx, card);
       ctx.restore();
-    }
+    },
+    boxes() { return BOX.map((b) => ({ ...b })); }
   };
 })();

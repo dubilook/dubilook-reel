@@ -1,13 +1,15 @@
-// PART 2 (2026-10-17): an item with dm_keyword also gets a CLEAN file (no «Comment X» pill) for Telegram / Facebook /
-// Threads — Telegram has no comment→DM, so the promise must not be there. Runs render-job.mjs against a fake site.
-//   node studio/test-clean-variant.mjs
-// Checks: image post → position 22 variant clean, differs from the main file; carousel → clean last slide at 23
-// (meta.slide = last index); edu card → 22 clean; items WITHOUT a keyword upload no clean file.
+// render-job.mjs against a fake site (batch R68, owner 2026-10-17 [stated]):
+//   · same image everywhere — NO «clean» variant is rendered or uploaded any more (Telegram/Facebook get the Instagram file)
+//   · carousel: the cover and every content slide carry the corner keyword badge; the last slide is the fixed end
+//     poster assets/end-poster.jpg, byte for byte, for every carousel (with or without keyword); ≤ 10 slides in all
+//   · digest: page-1 image at 31, PDF at 30 (PART 6 of fixes-1017, kept)
+//   node studio/test-render-job.mjs
 import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
+import { chromium } from "playwright-core";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,11 +34,13 @@ const payload = { brand: "test", job: 1, callback: cb, day: "2026-10-16", items:
   { id: 2, format: "image", template: "post-news", data: { ...news } },
   { id: 3, format: "carousel", template: "carousel-news", data: { cover_title: "This week", date: "2026-10-16", cover_hooks: ["a", "b", "c"], cta: "Send this to a colleague",
       slides: [news, news], dm_keyword: "Weekly" } },
+  { id: 6, format: "carousel", template: "carousel-news", data: { cover_title: "Nine stories", date: "2026-10-16", cover_hooks: ["a", "b", "c"], cta: "Send this to a colleague",
+      slides: Array.from({ length: 9 }, () => news) } },
   { id: 5, format: "image", template: "post-digest", data: { dm_keyword: "Marina", digest: { date: "2026-10-16", date_label: "Friday, 16 October 2026", short_date: "16 Oct 2026", year: 2026,
       cards: [0, 1, 2, 3].map((k) => ({ lang: "en", tag: "News", headline: "Story " + k, summary: "S.", source: "Gulf News", hero: null, hero_shape: "4:5", source_url: null, instagram_url: "https://www.instagram.com/p/x" + k + "/", lead: k === 0, lead_text: "Lead." })) } } },
   { id: 4, format: "image", template: "edu-law", data: { kind: "law", headline: "Your landlord needs 12 months notice", red: ["12 months"], body: "Notice by notary.", ref: "Law No. 26 of 2007", source: "DLD", dm_keyword: "Notice" } },
 ] };
-const pf = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cleanv-")), "payload.json");
+const pf = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "rjob-")), "payload.json");
 fs.writeFileSync(pf, JSON.stringify(payload));
 const child = spawn(process.execPath, [path.join(ROOT, "studio/render-job.mjs"), pf], { env: { ...process.env, IG_API_SECRET: "t" }, stdio: ["ignore", "inherit", "inherit"] });
 const code = await new Promise((r) => child.on("exit", r));
@@ -46,17 +50,32 @@ let fails = 0, checks = 0;
 const ok = (c, m) => { checks++; if (!c) { fails++; console.log("  ✗ " + m); } };
 const find = (item, pos) => got.find((g) => g.item === item && g.position === pos);
 ok(code === 0, "render-job exit " + code);
-ok(complete && complete.items.length === 5, "render-complete lists 4 items: " + JSON.stringify(complete));
-const c1 = find(1, 22), m1 = find(1, 0);
-ok(c1 && c1.meta.variant === "clean", "image post with keyword: no clean file at 22");
-ok(c1 && m1 && !c1.bytes.equals(m1.bytes), "image post: clean file equals the pill file");
-ok(!got.some((g) => g.item === 2 && g.meta.variant === "clean"), "image post WITHOUT keyword uploaded a clean file");
-const slides = got.filter((g) => g.item === 3 && g.position < 20).length;
-const c3 = find(3, 23);
-ok(c3 && c3.meta.variant === "clean" && c3.meta.slide === slides - 1, `carousel: no clean last slide at 23 with meta.slide=${slides - 1}: ${JSON.stringify(c3 && c3.meta)}`);
-ok(c3 && !c3.bytes.equals(find(3, slides - 1).bytes), "carousel: clean last slide equals the pill slide");
-const c4 = find(4, 22);
-ok(c4 && c4.meta.variant === "clean" && !c4.bytes.equals(find(4, 0).bytes), "edu card with keyword: no distinct clean file at 22");
+ok(complete && complete.items.length === 6, "render-complete lists 6 items: " + JSON.stringify(complete));
+const poster = fs.readFileSync(path.join(ROOT, "assets", "end-poster.jpg"));
+ok(!got.some((g) => g.meta.variant === "clean" || g.position === 22 || g.position === 23), "a clean variant was uploaded: " +
+  JSON.stringify(got.filter((g) => g.meta.variant === "clean").map((g) => [g.item, g.position])));
+// decode the uploaded JPEGs in a browser and look at the top-right corner (gold = the badge)
+const exe = process.env.CHROME_PATH || (process.platform === "win32" ? "C:/Program Files/Google/Chrome/Application/chrome.exe" : undefined);
+const browser = await chromium.launch({ executablePath: exe && fs.existsSync(exe) ? exe : undefined });
+const pg = await browser.newPage();
+const corner = (g) => pg.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode();
+  const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+  return [...x.getImageData(im.width - 60, 10, 1, 1).data].slice(0, 3); }, "data:image/jpeg;base64," + g.bytes.toString("base64"));
+const gold = (p) => Math.abs(p[0] - 0xC9) < 30 && Math.abs(p[1] - 0xA2) < 30 && Math.abs(p[2] - 0x4A) < 30;
+ok(!got.some((g) => g.item === 3 && g.meta.variant), "carousel 3: a file carries a variant (the site would leave it out of the post)");
+const c3 = got.filter((g) => g.item === 3 && g.position < 20).sort((a, b) => a.position - b.position);
+ok(c3.length === 4, "carousel 3: expected cover + 2 slides + poster = 4 files, got " + c3.length);
+for (const g of c3.slice(0, -1)) ok(gold(await corner(g)), `carousel 3 slide ${g.position}: no gold keyword badge in the corner`);
+ok(c3.length && c3[c3.length - 1].bytes.equals(poster), "carousel 3: last slide is not the fixed end poster");
+const m1 = find(1, 0);
+ok(m1 && gold(await corner(m1)), "image post with keyword: no corner badge");
+ok(find(2, 0) && !gold(await corner(find(2, 0))), "image post WITHOUT keyword has a gold corner");
+ok(find(4, 0) && gold(await corner(find(4, 0))), "edu card with keyword: no corner badge");
+const c6 = got.filter((g) => g.item === 6 && g.position < 20).sort((a, b) => a.position - b.position);
+ok(c6.length === 10 && c6.every((g, k) => g.position === k), "carousel of 9 stories: expected 10 files at 0..9, got " + c6.map((g) => g.position));
+ok(c6.length && c6[c6.length - 1].bytes.equals(poster), "carousel without keyword: last slide is not the end poster");
+ok(c6.length && !gold(await corner(c6[0])), "carousel without keyword: the cover has a badge");
+await browser.close();
 // PART 6: the digest also uploads an image of its first page (the /today/{date} preview), never part of the post
 const p1 = find(5, 31);
 ok(p1 && p1.kind === "image" && p1.meta.variant === "digest-page1" && p1.bytes.length > 5000, "digest: no page-1 image at 31: " + JSON.stringify(p1 && p1.meta));

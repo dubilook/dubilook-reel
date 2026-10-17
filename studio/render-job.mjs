@@ -174,15 +174,12 @@ async function renderDigest(it, f) {
   await upload(it.id, 31, "image", f("page1.jpg"), { variant: "digest-page1", date: d.date });
 }
 
-// PART 2 (2026-10-17, owner: Telegram has no comment→DM): an item with dm_keyword also gets a CLEAN file without the
-// «Comment X» pill — variant "clean", position 22 (single image) / 23 (carousel last slide, meta.slide = its index).
-// Instagram keeps the pill file; the site uses the clean one for every other platform. Reels are not doubled.
-async function cleanVariant(it, kind, card, file, position, meta = {}) {
-  if (!card.dm_keyword) return;
-  const { dm_keyword, ...clean } = card;
-  await still(kind, clean, file);
-  await upload(it.id, position, "image", file, { variant: "clean", ...meta });
-}
+// R68 (owner 2026-10-17 [stated]): every carousel ends on the fixed «publish this news under your name» poster —
+// a static asset, never rendered per carousel (source: assets/end-poster-src/). It replaces «Send this to a colleague».
+// Instagram allows 10 slides: cover + at most 8 content slides + the poster (the poster takes the last place).
+// The «clean» variant of fixes-1017 PART 2 is gone: Telegram/Facebook get exactly the Instagram image with the badge.
+const END_POSTER = path.join(ROOT, "assets", "end-poster.jpg");
+const MAX_SLIDES = 10;
 
 const done = [], failed = [];
 for (const it of payload.items) {
@@ -205,7 +202,6 @@ for (const it of payload.items) {
       } else {
         await still("edu", { ...d, type: d.kind }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
-        await cleanVariant(it, "edu", { ...d, type: d.kind }, f("clean.jpg"), 22);
       }
       done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
       continue;
@@ -236,17 +232,15 @@ for (const it of payload.items) {
       case "image":
         await still("post", { ...cardOf(d), ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
-        await cleanVariant(it, "post", { ...cardOf(d), ...photoOf(d) }, f("clean.jpg"), 22);
         break;
       case "carousel": {
-        const slides = d.slides || [];
-        const of = slides.length + 2;
-        await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, ...photoOf(d) }, f("0.jpg"));
+        const slides = (d.slides || []).slice(0, MAX_SLIDES - 2);
+        if ((d.slides || []).length > slides.length) console.warn(`! carousel ${it.id}: ${d.slides.length} stories, ${slides.length} fit before the end poster`);
+        const of = slides.length + 2, kw = d.dm_keyword || null;   // the same keyword badge on the cover and every content slide
+        await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, dm_keyword: kw, ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
-        for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
-        await still("post", { type: "cta", text: d.cta, slide: { n: of, of }, dm_keyword: d.dm_keyword }, f(`${of - 1}.jpg`));   // Q1: keyword pill on the last slide
-        await upload(it.id, of - 1, "image", f(`${of - 1}.jpg`));
-        await cleanVariant(it, "post", { type: "cta", text: d.cta, slide: { n: of, of }, dm_keyword: d.dm_keyword }, f("clean.jpg"), 23, { slide: of - 1 });
+        for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), dm_keyword: kw, slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
+        await upload(it.id, of - 1, "image", END_POSTER, { end_poster: true });   // a main file (a "variant" would leave the post)
         break;
       }
       case "reel": {

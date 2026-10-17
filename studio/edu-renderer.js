@@ -20,6 +20,10 @@
 
   const W = 1080, H = 1350, M = 80;
   const PAPER = "#f6f3ee", INK = "#141414", RED = "#e3141c", MUTED = "#6e6a64", RULE = "#d9d3ca", PANEL = "#ffffff";
+  // layout boxes of the last draw() (R68): brand / slide / kicker / head / foot — read by studio/test-keyword-badge.mjs.
+  // host.html draws the corner keyword badge after draw(); while the card carries dm_keyword the slide tag moves down.
+  let BOX = [], KW = false;
+  const box = (k, y0, y1, x0, x1) => BOX.push({ k, y0: Math.round(y0), y1: Math.round(y1), x0: Math.round(x0 ?? 0), x1: Math.round(x1 ?? W) });
   const A = {};
 
   const font = (w, s) => w + " " + s + "px PJS, -apple-system, system-ui, sans-serif";
@@ -82,14 +86,16 @@
     const img = A.brandLight;
     if (!img) return;
     const h = 60, w = img.width * (h / img.height), x = (W - w) / 2, top = y - 53;   // owner 2026-10-16: ~20% smaller
-    ctx.drawImage(img, x, top, w, h);
+    ctx.drawImage(img, x, top, w, h); box("brand", top, top + h, x, x + w + 24);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = INK;
     ctx.font = font(600, 16); ctx.fillText("™", x + w + 6, top + 14);
   }
   function slideTag(ctx, slide, y) {
     if (!slide) return;
+    if (KW) y += 44;   // below the corner keyword badge
     ctx.font = font(600, 22); ctx.fillStyle = MUTED; ctx.textBaseline = "alphabetic";
-    spaced(ctx, slide.n + " / " + slide.of, W - M, y, 3, "right");
+    const tw = spaced(ctx, slide.n + " / " + slide.of, W - M, y, 3, "right");
+    box("slide", y - 20, y + 4, W - M - (tw || 120), W - M);
   }
   // red pill with white letters: "DID YOU KNOW? · LAW"
   function pill(ctx, text, y) {
@@ -97,6 +103,7 @@
     const sp = 6, chars = [...text];
     const tw = chars.reduce((a, c) => a + ctx.measureText(c).width, 0) + sp * (chars.length - 1);
     const pw = tw + 56, ph = 54, x = (W - pw) / 2;
+    box("kicker", y - ph + 14, y + 14, x, x + pw);
     ctx.fillStyle = RED; roundRect(ctx, x, y - ph + 14, pw, ph, ph / 2); ctx.fill();
     ctx.fillStyle = "#fff"; ctx.textBaseline = "alphabetic";
     spaced(ctx, text, W / 2, y - 5, sp, "center");
@@ -109,28 +116,9 @@
     ctx.save(); ctx.shadowColor = "rgba(40,30,20,0.10)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
     ctx.fillStyle = PANEL; roundRect(ctx, x, y, w, h, 28); ctx.fill(); ctx.restore();
   }
-  // keyword call-to-action (owner 2026-10-16 ~02:14 [stated]): the same red pill as the dark posts,
-  // drawn as a slim band just above the footer rule — only when the card carries dm_keyword (site: edu
-  // cards WITH a url). White text on brand red reads on the cream ground.
-  function ctaPill(ctx, keyword) {
-    const kw = String(keyword).toUpperCase();
-    const a = "COMMENT ", b = " → WE'LL DM YOU THE SOURCE";
-    ctx.textBaseline = "alphabetic";
-    const f6 = font(600, 25), f8 = font(800, 25);
-    ctx.font = f6; const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
-    ctx.font = f8; const wk = ctx.measureText(kw).width;
-    const tw = wa + wk + wb, ph = 48, pw = tw + 60, px = (W - pw) / 2, py = H - 218;
-    ctx.fillStyle = RED; ctx.beginPath(); roundRect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.textAlign = "left";
-    let x = px + 30; const ty = py + ph * 0.67;
-    ctx.font = f6; ctx.fillText(a, x, ty); x += wa;
-    ctx.font = f8; ctx.fillText(kw, x, ty); ctx.fillRect(x, ty + 7, wk, 3); x += wk;
-    ctx.font = f6; ctx.fillText(b, x, ty);
-  }
-
   function footer(ctx, card) {
     const y = H - 70;
-    if (card.dm_keyword) ctaPill(ctx, card.dm_keyword);
+    box("foot", y - 76, y + 10);
     ctx.fillStyle = RULE; ctx.fillRect(M, y - 74, W - 2 * M, 2);
     ctx.textBaseline = "alphabetic";
     ctx.font = font(500, 18); ctx.fillStyle = MUTED;
@@ -329,7 +317,9 @@
       const fn = DRAW[card.type];
       if (!fn) throw new Error("edu: unknown card type " + card.type);
       try { ctx.direction = "ltr"; } catch (e) {}
+      BOX = []; KW = !!card.dm_keyword;
       ctx.save(); fn(ctx, card); ctx.restore();
-    }
+    },
+    boxes() { return BOX.map((b) => ({ ...b })); }
   };
 })();
