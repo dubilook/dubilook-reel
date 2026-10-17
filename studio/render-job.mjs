@@ -190,15 +190,17 @@ for (const it of payload.items) {
     // light-theme education cards (edu-renderer.js): one 4:5 image, or a checklist carousel
     if (String(it.template || "").startsWith("edu-")) {
       if (d.kind === "checklist") {
-        const steps = d.steps || [], of = steps.length + 2;
-        await still("edu", { type: "list-cover", title: d.headline, red: d.red || [], subtitle: d.subtitle || "", of }, f("0.jpg"));
+        // R69 (R68 high K1 + owner 2026-10-17 21:25 [stated]): the keyword badge on the cover and every step, and the
+        // same fixed end poster as news carousels instead of the checklist's own light end slide; ≤ 10 slides
+        const steps = (d.steps || []).slice(0, MAX_SLIDES - 2), of = steps.length + 2, kw = d.dm_keyword || null;
+        if ((d.steps || []).length > steps.length) console.warn(`! checklist ${it.id}: ${d.steps.length} steps, ${steps.length} fit before the end poster`);
+        await still("edu", { type: "list-cover", title: d.headline, red: d.red || [], subtitle: d.subtitle || "", of, dm_keyword: kw }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
         for (const [k, s] of steps.entries()) {
-          await still("edu", { type: "list-item", n: k + 1, title: s.title, body: s.body, slide: { n: k + 2, of } }, f(`${k + 1}.jpg`));
+          await still("edu", { type: "list-item", n: k + 1, title: s.title, body: s.body, slide: { n: k + 2, of }, dm_keyword: kw }, f(`${k + 1}.jpg`));
           await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`));
         }
-        await still("edu", { type: "list-cta", text: d.cta || "", slide: { n: of, of } }, f(`${of - 1}.jpg`));
-        await upload(it.id, of - 1, "image", f(`${of - 1}.jpg`));
+        await upload(it.id, of - 1, "image", END_POSTER, { end_poster: true });
       } else {
         await still("edu", { ...d, type: d.kind }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
