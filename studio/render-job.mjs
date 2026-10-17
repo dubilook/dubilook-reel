@@ -155,6 +155,15 @@ async function renderDigest(it, f) {
     await dp.setContent(digestHtml(data), { waitUntil: "load" });
     await dp.evaluate(() => document.fonts.ready);
     await dp.pdf({ path: f("digest.pdf"), preferCSSPageSize: true, printBackground: true });
+    // 2026-10-17 PART 6: an image of page 1 — the preview on dubilook.com/today/{date} (the host cannot rasterise a PDF)
+    const pp = await browser.newPage({ deviceScaleFactor: 2 });
+    try {
+      await pp.goto(base + "/assets/digest/blank.html");
+      await pp.setContent(digestHtml(data), { waitUntil: "load" });
+      await pp.evaluate(() => document.fonts.ready);
+      await pp.emulateMedia({ media: "print" });
+      await (await pp.$(".sheet")).screenshot({ path: f("page1.jpg"), type: "jpeg", quality: 85 });
+    } finally { await pp.close(); }
     await dp.setViewportSize({ width: 1080, height: 1350 });
     await dp.setContent(postHtml(data), { waitUntil: "load" });
     await dp.evaluate(() => document.fonts.ready);
@@ -162,6 +171,7 @@ async function renderDigest(it, f) {
   } finally { await dp.close(); }
   await upload(it.id, 0, "image", f("0.jpg"));
   await upload(it.id, 30, "pdf", f("digest.pdf"), { variant: "digest-pdf", date: d.date, cards: cards.length });
+  await upload(it.id, 31, "image", f("page1.jpg"), { variant: "digest-page1", date: d.date });
 }
 
 // PART 2 (2026-10-17, owner: Telegram has no comment→DM): an item with dm_keyword also gets a CLEAN file without the
