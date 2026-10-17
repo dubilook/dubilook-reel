@@ -164,6 +164,16 @@ async function renderDigest(it, f) {
   await upload(it.id, 30, "pdf", f("digest.pdf"), { variant: "digest-pdf", date: d.date, cards: cards.length });
 }
 
+// PART 2 (2026-10-17, owner: Telegram has no comment→DM): an item with dm_keyword also gets a CLEAN file without the
+// «Comment X» pill — variant "clean", position 22 (single image) / 23 (carousel last slide, meta.slide = its index).
+// Instagram keeps the pill file; the site uses the clean one for every other platform. Reels are not doubled.
+async function cleanVariant(it, kind, card, file, position, meta = {}) {
+  if (!card.dm_keyword) return;
+  const { dm_keyword, ...clean } = card;
+  await still(kind, clean, file);
+  await upload(it.id, position, "image", file, { variant: "clean", ...meta });
+}
+
 const done = [], failed = [];
 for (const it of payload.items) {
   try {
@@ -185,6 +195,7 @@ for (const it of payload.items) {
       } else {
         await still("edu", { ...d, type: d.kind }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
+        await cleanVariant(it, "edu", { ...d, type: d.kind }, f("clean.jpg"), 22);
       }
       done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
       continue;
@@ -215,6 +226,7 @@ for (const it of payload.items) {
       case "image":
         await still("post", { ...cardOf(d), ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
+        await cleanVariant(it, "post", { ...cardOf(d), ...photoOf(d) }, f("clean.jpg"), 22);
         break;
       case "carousel": {
         const slides = d.slides || [];
@@ -224,6 +236,7 @@ for (const it of payload.items) {
         for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
         await still("post", { type: "cta", text: d.cta, slide: { n: of, of }, dm_keyword: d.dm_keyword }, f(`${of - 1}.jpg`));   // Q1: keyword pill on the last slide
         await upload(it.id, of - 1, "image", f(`${of - 1}.jpg`));
+        await cleanVariant(it, "post", { type: "cta", text: d.cta, slide: { n: of, of }, dm_keyword: d.dm_keyword }, f("clean.jpg"), 23, { slide: of - 1 });
         break;
       }
       case "reel": {
