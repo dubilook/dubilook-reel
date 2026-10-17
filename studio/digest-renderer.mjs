@@ -3,10 +3,11 @@
 // real Arabic shaping) and screenshots the 20:00 post image.
 //
 // data = { date: "2026-10-16", date_label: "Friday, 16 October 2026", short_date: "16 Oct 2026", year: 2026,
-//          keyword: "Marina", prepared_for: null|"handle",
-//          figures: [{ value, unit, label }] (0–3, only real numbers from the day's items; none → no strip),
+//          keyword: "Marina", page_url: "https://dubilook.com/today/2026-10-16" (the in-PDF WhatsApp share),
 //          cards: [{ lang: "en"|"ar", tag, headline, summary, source, hero: dataURL|null, hero_shape: "4:5"|"9:16",
-//                    source_url|null, instagram_url, reel_url|null }] }
+//                    source_url|null, instagram_url, reel_url|null, lead?: true (cards[0] only), lead_text? }] }
+// 2026-10-17 PART 5 (owner approved): no figures strip any more; cards[0].lead = the full-width lead story alone on
+// page 1 (the site picks it); «Share this file on WhatsApp» on the cover and in the closing block.
 // Owner rule 16 Oct 12:15 [stated]: on a dark background the dark-background logo (white letters, no plate);
 // on the light page the light-background logo.
 import fs from "node:fs";
@@ -39,7 +40,29 @@ const EXTRA_CSS = `
 .hero.tall{background:var(--ink)} .hero.tall img{object-fit:contain}
 .hero .none{position:absolute;inset:0;display:grid;place-items:center;font-family:PlexCond;font-weight:700;font-size:13pt;color:rgba(255,255,255,.18);letter-spacing:.06em}
 .acts.one{grid-template-columns:1fr}
+/* 2026-10-17 PART 5: the day's lead story, full width at the top of page 1 */
+.grid.one{grid-template-columns:1fr}
+.card.lead .hero{aspect-ratio:1/1;background:var(--ink)} .card.lead .hero img{object-fit:contain}
+.card.lead .body{padding:3.4mm 3.6mm 3.6mm}
+.card.lead h3{font-size:15pt;line-height:1.08}
+.card.lead .lt{font-size:8.2pt;line-height:1.46;color:#2b3c4e;margin-top:2.2mm}
+.card.lead .lt[dir=rtl]{font-family:PlexAr;text-align:right;line-height:1.75}
+.card.lead .acts .btn{height:9.4mm;font-size:7.6pt}
+.kick{font-size:6.4pt;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:1.2mm}
+/* «Share this file on WhatsApp» — cover and closing block */
+.btn.wa{background:#1fa855;color:#fff;height:8mm;padding:0 3.6mm;display:inline-flex}
+.mast .wa{margin-top:3.6mm}
+.close .wa{margin-top:3.4mm;width:100%}
 `;
+const WA_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.9 5.1c.2-.4.6-.4.8 0l.5 1.1c.1.2 0 .4-.1.6l-.4.4c.4.8 1 1.4 1.9 1.9l.4-.4c.2-.2.4-.2.6-.1l1.1.5c.4.2.4.6 0 .9-.7.6-1.6.6-2.6 0-1.2-.7-2.2-1.7-2.7-2.8-.4-.9-.2-1.6.5-2.1Z" fill="currentColor"/></svg>';
+
+/** 2026-10-17 PART 5: wa.me with a short text + the file's page (dubilook.com/today/{date}) — never the raw PDF URL. */
+export function shareUrl(d) {
+  const page = d.page_url || `https://dubilook.com/today/${d.date}`;
+  const n = (d.cards || []).length;
+  return "https://wa.me/?text=" + encodeURIComponent(`Dubai Property Today, ${d.date_label || dateLabelOf(d.date)}: ${n} ${n === 1 ? "story" : "stories"} in one PDF. ${page}`);
+}
+const shareBtn = (d) => `<a class="btn wa" href="${esc(shareUrl(d))}">${WA_ICON}<span>Share this file on WhatsApp</span></a>`;
 
 function card(c) {
   const rtl = c.lang === "ar" ? ' dir="rtl" lang="ar"' : "";
@@ -49,9 +72,11 @@ function card(c) {
   const src = c.source_url ? `<a class="btn red" href="${esc(c.source_url)}"><span>Read source</span>${parts.icons.arrow}</a>` : "";
   const ig = `<a class="btn ghost" href="${esc(c.instagram_url || "https://www.instagram.com/dubilook")}">${parts.icons.ig}<span>Instagram</span></a>`;
   const reel = c.reel_url ? `<a class="btn ghost wide" href="${esc(c.reel_url)}">${parts.icons.play}<span>Watch the reel</span></a>` : "";
-  return `<article class="card">${hero}<div class="body">
+  const text = c.lead ? (c.lead_text || c.summary) : c.summary;
+  return `<article class="card${c.lead ? " lead" : ""}">${hero}<div class="body">
+  ${c.lead ? `<p class="kick">Today's lead story</p>` : ""}
   <h3${rtl}>${esc(c.headline)}</h3>
-  ${c.summary ? `<p class="sum"${rtl}>${esc(c.summary)}</p>` : ""}
+  ${text ? `<p class="${c.lead ? "lt" : "sum"}"${rtl}>${esc(text)}</p>` : ""}
   ${c.source ? `<p class="src">${esc(c.source)}</p>` : ""}
   <div class="acts${src ? "" : " one"}">${src}${ig}</div>
   ${reel}
@@ -60,27 +85,25 @@ function card(c) {
 
 function closing(d) {
   const legal = parts.legal.replace(/© \d{4} Dubilook/, `© ${esc(d.year)} Dubilook`);
-  return `<aside class="endcol"><div class="close"><h4>Get the next file too</h4><p class="lead">Most evenings at 8 pm we post a new one (not on days with fewer than four stories). Comment its keyword and we send that file to your inbox.</p>${parts.socs}</div>
+  return `<aside class="endcol"><div class="close"><h4>Get the next file too</h4><p class="lead">Most evenings at 8 pm we post a new one (not on days with fewer than four stories). Comment its keyword and we send that file to your inbox.</p>${shareBtn(d)}${parts.socs}</div>
   ${legal}</aside>`;
 }
 
-/** Splits the cells (cards + the closing block) into pages: 2 under the masthead, then 4 a page. */
-export function paginate(cells) {
-  const pages = [cells.slice(0, PAGE1_CELLS)];
-  for (let i = PAGE1_CELLS; i < cells.length; i += PAGE_CELLS) pages.push(cells.slice(i, i + PAGE_CELLS));
+/** Splits the cells (cards + the closing block) into pages: the lead alone under the masthead (else 2), then 4 a page. */
+export function paginateCards(cells, leadAlone = true) {
+  const first = leadAlone ? 1 : PAGE1_CELLS;
+  const pages = [cells.slice(0, first)];
+  for (let i = first; i < cells.length; i += PAGE_CELLS) pages.push(cells.slice(i, i + PAGE_CELLS));
   return pages;
 }
 
 export function digestHtml(d) {
   const cells = [...d.cards.map(card), closing(d)];
-  const pages = paginate(cells);
+  const hasLead = !!(d.cards[0] && d.cards[0].lead);
+  const pages = paginateCards(cells, hasLead);
   const n = pages.length;
   const run = (k) => `<footer class="run"><span>Dubilook, your daily property briefing</span><span>Page ${k + 1} of ${n}</span></footer>`;
-  const figures = (d.figures || []).slice(0, 3);
-  const ledger = figures.length
-    ? `<p class="ledger-cap">The day in ${figures.length === 1 ? "one figure" : figures.length === 2 ? "two figures" : "three figures"}</p>
- <div class="ledger" style="grid-template-columns:repeat(${figures.length},1fr)">${figures.map((f) => `<div><strong>${esc(f.value)}</strong><em>${esc(f.unit)}</em><span>${esc(f.label)}</span></div>`).join("")}</div>`
-    : `<div style="height:4mm"></div>`;
+  // owner 17 Oct [stated]: «The day in one figure» removed — it repeated a card and said nothing
   const stories = `${d.cards.length} ${d.cards.length === 1 ? "story" : "stories"}`;
   const sheets = pages.map((cells, k) => k === 0
     ? `<section class="sheet">
@@ -88,10 +111,10 @@ export function digestHtml(d) {
   <div class="row"><span class="logo"><img src="${LOGO_DARK_BG}" alt="Dubilook"></span><span class="edition">Evening edition</span></div>
   <h1>Dubai Property<br>Today</h1>
   <div class="dateline"><b>${esc(d.date_label)}</b><span>${stories}</span></div>
-  ${d.prepared_for ? `<div class="for"><i>@</i><span>Prepared for <b>@${esc(d.prepared_for)}</b></span></div>` : ""}
+  ${shareBtn(d)}
  </header>
- ${ledger}
- <div class="grid">${cells.join("")}</div>
+ <div style="height:4mm"></div>
+ <div class="grid${hasLead ? " one" : ""}">${cells.join("")}</div>
  ${run(k)}
 </section>`
     : `<section class="sheet">
