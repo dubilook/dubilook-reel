@@ -28,6 +28,9 @@
   const RED = "#e3141c", WHITE = "#ffffff", GREY = "#b9b9b9";
   const DISCLAIMER = "Dubilook™ is the narrator only. Information is attributed to the cited source and is not independently claimed by Dubilook™.";
   const A = {};
+  // layout boxes of the last draw() (2026-10-17 PART 1): pill / head / foot / strip — read by studio/test-cta-photo.mjs
+  let BOX = [];
+  const box = (k, y0, y1, x0, x1) => BOX.push({ k, y0: Math.round(y0), y1: Math.round(y1), x0: Math.round(x0 ?? 0), x1: Math.round(x1 ?? W) });
 
   const font = (w, s) => w + " " + s + "px PJS, -apple-system, system-ui, sans-serif";
   const heavy = (s) => "400 " + s + "px Anton, Impact, 'Arial Narrow', sans-serif";
@@ -198,11 +201,15 @@
     g.addColorStop(0, rgb(panel, 1)); g.addColorStop(1, rgb(panel, 0));
     ctx.fillStyle = g; ctx.fillRect(0, panelTop ? py : py + photoH - fade, W, fade);
     const T = { ink, sub, soft, light };
+    // keyword CTA (2026-10-17 PART 1): photo cards lacked it — the pill sits in the panel, on the panel's own colour,
+    // and the headline area gives up the room for it (as on the no-photo card)
+    const kw = card.dm_keyword, KW_ROOM = 90;
     if (panelTop) {
       brandRow(ctx, 118, T); slideTag(ctx, card.slide, 116);
       kicker(ctx, label, 206);
       // the angle line is left out on photo cards: the panel is shorter (it stays in the caption)
-      headlineBlock(ctx, card.headline, card.red, 250, H - photoH - 10, { summary: card.summary }, T);
+      headlineBlock(ctx, card.headline, card.red, 250, H - photoH - 10 - (kw ? KW_ROOM : 0), { summary: card.summary }, T);
+      if (kw) ctaPill(ctx, kw, H - photoH - 45, 1, { halo: rgb(panel) });
       // source + disclaimer over the bottom of the photo, on a dark scrim
       const sc = ctx.createLinearGradient(0, H - 260, 0, H); sc.addColorStop(0, "rgba(0,0,0,0)"); sc.addColorStop(1, "rgba(0,0,0,0.78)");
       ctx.fillStyle = sc; ctx.fillRect(0, H - 260, W, 260);
@@ -213,7 +220,8 @@
       ctx.fillStyle = sc; ctx.fillRect(0, 0, W, 220); ctx.restore();
       brandRow(ctx, 118); slideTag(ctx, card.slide, 116);
       kicker(ctx, label, top + 30);
-      headlineBlock(ctx, card.headline, card.red, top + 60, H - 220, { summary: card.summary }, T);
+      headlineBlock(ctx, card.headline, card.red, top + 60, H - 220 - (kw ? KW_ROOM : 0), { summary: card.summary }, T);
+      if (kw) ctaPill(ctx, kw, H - 255, 1, { halo: rgb(panel) });
       footer(ctx, card, H - 70, T);
     }
     photoCredit(ctx, card, light && !panelTop);
@@ -229,12 +237,22 @@
     const sc = ctx.createLinearGradient(0, 0, 0, 200); sc.addColorStop(0, "rgba(0,0,0,0.6)"); sc.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = sc; ctx.fillRect(0, 0, W, 200);
     brandRow(ctx, 96);
+    // keyword CTA (2026-10-17 PART 1): a red pill would vanish in the red headline block — it sits on the bottom of
+    // the photo, just above the label strip, on a soft dark scrim (a black halo ring looked heavy on bright photos)
+    if (card.dm_keyword) {
+      const kg = ctx.createLinearGradient(0, photoH - 190, 0, photoH);
+      kg.addColorStop(0, "rgba(0,0,0,0)"); kg.addColorStop(1, "rgba(0,0,0,0.62)");
+      ctx.fillStyle = kg; ctx.fillRect(0, photoH - 190, W, 190);
+      ctaPill(ctx, card.dm_keyword, photoH - 58, 1, { halo: null });
+    }
+    box("strip", photoH, blockTop);
     ctx.fillStyle = "rgba(10,10,10,0.92)"; ctx.fillRect(0, photoH, W, stripH);
     ctx.textBaseline = "alphabetic"; ctx.font = font(800, 26); ctx.fillStyle = WHITE;
     spaced(ctx, label + "   ·   " + fmtDate(card.date), W / 2, photoH + 46, 5, "center");
     ctx.fillStyle = RED; ctx.fillRect(0, blockTop, W, blockBot - blockTop);
     headlineBlock(ctx, card.headline, card.red, blockTop + 34, blockBot - 34, {}, { ink: [255, 255, 255], sub: "#fff", soft: "#fff", red: "#111111", maxSize: 150 });
     ctx.fillStyle = "#000"; ctx.fillRect(0, blockBot, W, footH);
+    box("foot", blockBot, H);
     ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
     ctx.font = font(500, 18); ctx.fillStyle = "#8a8a8a"; spaced(ctx, "SOURCE", M, blockBot + 52, 5, "left");
     ctx.font = font(800, 25); ctx.fillStyle = WHITE; spaced(ctx, String(card.source || "").toUpperCase(), M, blockBot + 88, 3, "left");
@@ -255,9 +273,12 @@
     ctx.fillStyle = t; ctx.fillRect(0, 0, W, 220);
     brandRow(ctx, 110);
     // pill on the left, just above the headline
-    const end = headlineBlock(ctx, card.headline, card.red, 560, H - 200, { summary: card.summary },
+    // keyword CTA (2026-10-17 PART 1): left-aligned like the headline, between the headline and the source line
+    const kw = card.dm_keyword;
+    const end = headlineBlock(ctx, card.headline, card.red, 560, H - 200 - (kw ? 90 : 0), { summary: card.summary },
       { ink: [255, 255, 255], sub: "#e2e2e2", soft: "#aaa", left: true, maxW: W - 2 * M, valign: "bottom", maxSize: 130,
         onTop: (yTop) => pillLeft(ctx, label, M, yTop - 24) });
+    if (kw) ctaPill(ctx, kw, H - 245, 1, { x: M, halo: null });   // the bottom gradient is dark already — a halo ring showed
     footer(ctx, card, H - 50);
     photoCredit(ctx, card);
     return end;
@@ -316,22 +337,27 @@
   // keyword call-to-action ON the image (owner 2026-10-16 ~02:14 [stated]): a slim red pill —
   // "COMMENT <KEYWORD> → WE'LL DM YOU THE SOURCE", keyword heavier and underlined. Drawn only when
   // the item carries data.dm_keyword; never over the headline, the source line or the disclaimer.
-  function ctaPill(ctx, keyword, cy, scale) {
-    const s = scale || 1, kw = String(keyword).toUpperCase();
+  // opt.x = left edge (default: centred) · opt.halo = ground colour under the pill (default black, null = none)
+  function ctaPill(ctx, keyword, cy, scale, opt) {
+    const s = scale || 1, kw = String(keyword).toUpperCase(), o = opt || {};
     const a = "COMMENT ", b = " → WE'LL DM YOU THE SOURCE";
     ctx.textBaseline = "alphabetic";
     const f6 = font(600, 26 * s), f8 = font(800, 26 * s);
     ctx.font = f6; const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
     ctx.font = f8; const wk = ctx.measureText(kw).width;
-    const tw = wa + wk + wb, ph = 50 * s, pw = tw + 64 * s, px = (W - pw) / 2, py = cy - ph / 2;
+    const tw = wa + wk + wb, ph = 50 * s, pw = tw + 64 * s, px = o.x != null ? o.x : (W - pw) / 2, py = cy - ph / 2;
+    box("pill", py, py + ph, px, px + pw);
     // owner 2026-10-16 ~03:32 [stated]: the background's glow arcs must never run through the pill —
     // a soft ground-colour halo goes under it first, so the pill and its text are always clean
-    ctx.save();
-    ctx.fillStyle = "#000"; ctx.shadowColor = "#000"; ctx.shadowBlur = 48 * s;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s, (ph + 28 * s) / 2); else ctx.rect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s);
-    ctx.fill(); ctx.fill();   // twice: a dense core so the arc fully dims behind the pill
-    ctx.restore();
+    const halo = o.halo === undefined ? "#000" : o.halo;
+    if (halo) {
+      ctx.save();
+      ctx.fillStyle = halo; ctx.shadowColor = halo; ctx.shadowBlur = 48 * s;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s, (ph + 28 * s) / 2); else ctx.rect(px - 14 * s, py - 14 * s, pw + 28 * s, ph + 28 * s);
+      ctx.fill(); ctx.fill();   // twice: a dense core so the arc fully dims behind the pill
+      ctx.restore();
+    }
     ctx.fillStyle = RED; ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2); else ctx.rect(px, py, pw, ph);
     ctx.fill();
@@ -371,6 +397,7 @@
     }
     ({ size, lines, lh, sumLines, angLines, blockH, F } = best);
     const yTop = T && T.valign === "bottom" ? bottom - blockH : top + (bottom - top - blockH) / 2;
+    box("head", yTop, yTop + blockH);
     if (T && T.onTop) T.onTop(yTop, size);
     let y = yTop + size * 0.95;
     ctx.textBaseline = "alphabetic";
@@ -416,6 +443,7 @@
     spaced(ctx, fmtDate(card.date), M, yBase, 3, "left");
     ctx.font = font(500, 19); ctx.fillStyle = T ? T.sub : "#cfcfcf";
     const colX = 620, colW = W - M - colX, lines = wrap(ctx, DISCLAIMER, colW), lh = 27;
+    box("foot", Math.min(yBase - 84 - 18, yBase - (lines.length - 1) * lh - 19), yBase + 6);
     lines.forEach((ln, i) => ctx.fillText(ln, colX, yBase - (lines.length - 1 - i) * lh));
   }
 
@@ -441,7 +469,8 @@
       photoLayer(ctx, img, "split", splitH);
       brandRow(ctx, 118); slideTag(ctx, card.slide, 116);
       kicker(ctx, label, splitH - 70);
-      headlineBlock(ctx, card.headline, card.red, splitH - 40, footBase - 150, { summary: card.summary, angle: card.angle });
+      headlineBlock(ctx, card.headline, card.red, splitH - 40, footBase - (card.dm_keyword ? 240 : 150), { summary: card.summary, angle: card.angle });
+      if (card.dm_keyword) ctaPill(ctx, card.dm_keyword, footBase - 185);   // 2026-10-17 PART 1: same place as the no-photo card
     } else {
       background(ctx);
       if (img) photoLayer(ctx, img, "full");
@@ -622,10 +651,11 @@
       return { lens: !!A.lens, logo: !!A.brandDark };
     },
     // preload a bank photo (same-origin URL or data: URL) before draw(); returns true when usable
+    boxes() { return BOX.map((b) => ({ ...b })); },
     async photo(url) { if (!url) return false; if (!PHOTOS[url]) PHOTOS[url] = await loadImg(url); return !!PHOTOS[url]; },
     // height: 1350 for feed, 1920 for the story that announces a post
     draw(ctx, card, height) {
-      H = height || 1350;
+      H = height || 1350; BOX = [];
       try { ctx.direction = "ltr"; } catch (e) {}
       ctx.save();
       if (card.type === "cover") drawCover(ctx, card);
