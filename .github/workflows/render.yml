@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       MUSIC_REPO_TOKEN: ${{ secrets.MUSIC_REPO_TOKEN }}
