@@ -177,9 +177,20 @@ async function renderDigest(it, f) {
 // R68 (owner 2026-10-17 [stated]): every carousel ends on the fixed «publish this news under your name» poster —
 // a static asset, never rendered per carousel (source: assets/end-poster-src/). It replaces «Send this to a colleague».
 // Instagram allows 10 slides: cover + at most 8 content slides + the poster (the poster takes the last place).
-// The «clean» variant of fixes-1017 PART 2 is gone: Telegram/Facebook get exactly the Instagram image with the badge.
 const END_POSTER = path.join(ROOT, "assets", "end-poster.jpg");
 const MAX_SLIDES = 10;
+
+// Fix pack 2026-10-20 #8 (owner decision, reverses R68 «same image everywhere»): comment→DM works only on Instagram, so
+// every file that carries the corner keyword badge also gets a BADGE-FREE copy for Telegram and Facebook — variant
+// "clean" at CLEAN_BASE + its own position (0 → 40, carousel slide k → 40 + k; the end poster «… COMMENT IT» is not in
+// the clean set — commenting only works on Instagram; the reel video at 22). Instagram keeps the badge file; the site picks the clean set for the other platforms.
+const CLEAN_BASE = 40;
+async function cleanCopy(it, kind, card, file, position) {
+  if (!card.dm_keyword) return false;
+  await still(kind, { ...card, dm_keyword: null }, file);
+  await upload(it.id, CLEAN_BASE + position, "image", file, { variant: "clean", of: position });
+  return true;
+}
 
 const done = [], failed = [];
 for (const it of payload.items) {
@@ -194,16 +205,22 @@ for (const it of payload.items) {
         // same fixed end poster as news carousels instead of the checklist's own light end slide; ≤ 10 slides
         const steps = (d.steps || []).slice(0, MAX_SLIDES - 2), of = steps.length + 2, kw = d.dm_keyword || null;
         if ((d.steps || []).length > steps.length) console.warn(`! checklist ${it.id}: ${d.steps.length} steps, ${steps.length} fit before the end poster`);
-        await still("edu", { type: "list-cover", title: d.headline, red: d.red || [], subtitle: d.subtitle || "", of, dm_keyword: kw }, f("0.jpg"));
+        const cover = { type: "list-cover", title: d.headline, red: d.red || [], subtitle: d.subtitle || "", of, dm_keyword: kw };
+        await still("edu", cover, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
+        const clean = await cleanCopy(it, "edu", cover, f("clean-0.jpg"), 0);
         for (const [k, s] of steps.entries()) {
-          await still("edu", { type: "list-item", n: k + 1, title: s.title, body: s.body, slide: { n: k + 2, of }, dm_keyword: kw }, f(`${k + 1}.jpg`));
+          const card = { type: "list-item", n: k + 1, title: s.title, body: s.body, slide: { n: k + 2, of }, dm_keyword: kw };
+          await still("edu", card, f(`${k + 1}.jpg`));
           await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`));
+          await cleanCopy(it, "edu", card, f(`clean-${k + 1}.jpg`), k + 1);
         }
         await upload(it.id, of - 1, "image", END_POSTER, { end_poster: true });
+
       } else {
         await still("edu", { ...d, type: d.kind }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
+        await cleanCopy(it, "edu", { ...d, type: d.kind }, f("clean-0.jpg"), 0);
       }
       done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
       continue;
@@ -216,6 +233,7 @@ for (const it of payload.items) {
         await still("ar", card, f("tg.jpg")); await upload(it.id, 20, "image", f("tg.jpg"), { variant: "telegram" });
       } else if (it.format === "image") {
         await still("ar", card, f("0.jpg")); await upload(it.id, 0, "image", f("0.jpg"));
+        await cleanCopy(it, "ar", card, f("clean-0.jpg"), 0);
       } else throw new Error("Arabic " + it.format + " is not built yet");
       done.push(it.id); console.log(`✓ item ${it.id} (${it.template})`);
       continue;
@@ -234,15 +252,27 @@ for (const it of payload.items) {
       case "image":
         await still("post", { ...cardOf(d), ...photoOf(d) }, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
+        await cleanCopy(it, "post", { ...cardOf(d), ...photoOf(d) }, f("clean-0.jpg"), 0);
         break;
       case "carousel": {
         const slides = (d.slides || []).slice(0, MAX_SLIDES - 2);
         if ((d.slides || []).length > slides.length) console.warn(`! carousel ${it.id}: ${d.slides.length} stories, ${slides.length} fit before the end poster`);
-        const of = slides.length + 2, kw = d.dm_keyword || null;   // the same keyword badge on the cover and every content slide
-        await still("post", { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, dm_keyword: kw, ...photoOf(d) }, f("0.jpg"));
+        // fix pack 2026-10-20 #6 (owner decision): every news slide shows ITS OWN keyword (the slide's dm_keyword), the cover
+        // none. A carousel from before (one carousel-level word, slides without) keeps that word on every slide.
+        const of = slides.length + 2, perSlide = slides.some((s) => s && s.dm_keyword), kw = perSlide ? null : (d.dm_keyword || null);
+        const cover = { type: "cover", title: d.cover_title, date: d.date, hooks: d.cover_hooks || [], of, dm_keyword: kw, ...photoOf(d) };
+        await still("post", cover, f("0.jpg"));
         await upload(it.id, 0, "image", f("0.jpg"));
-        for (const [k, s] of slides.entries()) { await still("post", { ...cardOf(s), dm_keyword: kw, slide: { n: k + 2, of } }, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`)); }
+        let clean = await cleanCopy(it, "post", cover, f("clean-0.jpg"), 0);
+        for (const [k, s] of slides.entries()) {
+          const card = { ...cardOf(s), dm_keyword: perSlide ? (s.dm_keyword || null) : kw, slide: { n: k + 2, of } };
+          await still("post", card, f(`${k + 1}.jpg`)); await upload(it.id, k + 1, "image", f(`${k + 1}.jpg`));
+          clean = (await cleanCopy(it, "post", card, f(`clean-${k + 1}.jpg`), k + 1)) || clean;
+        }
         await upload(it.id, of - 1, "image", END_POSTER, { end_poster: true });   // a main file (a "variant" would leave the post)
+        // the clean set must be complete (Telegram/Facebook post it as one album): a slide without a badge is its own clean
+        // copy. The end poster («… COMMENT IT») is left out — commenting only works on Instagram.
+        if (clean) for (let p = 0; p < of - 1; p++) if (!fs.existsSync(f(`clean-${p}.jpg`))) await upload(it.id, CLEAN_BASE + p, "image", f(`${p}.jpg`), { variant: "clean", of: p });
         break;
       }
       case "reel": {
@@ -256,6 +286,14 @@ for (const it of payload.items) {
         appendLogoEnd(out, d);
         const audio = fs.existsSync(f("0.audio.json")) ? JSON.parse(fs.readFileSync(f("0.audio.json"), "utf8")) : {};
         await upload(it.id, 0, "video", out, { audio: audio.audio || null, trial: !!d.trial });
+        // fix pack 2026-10-20 #8: the keyword badge is burned into S5 → a second, badge-free video for Telegram/Facebook
+        if (d.dm_keyword) {
+          const miniClean = f("delivery-clean.json"); fs.writeFileSync(miniClean, JSON.stringify({ ...mini, reel: { ...mini.reel, dm_keyword: null } }));
+          const outClean = f("clean.mp4");
+          const rc = spawnSync("node", [path.join(ROOT, "studio/build-reel.mjs"), miniClean, "reel", outClean, "--workers", "2"], { stdio: "inherit" });
+          if (rc.status) console.warn(`! reel ${it.id}: the badge-free copy failed — Telegram/Facebook get the Instagram video`);
+          else { appendLogoEnd(outClean, d); await upload(it.id, 22, "video", outClean, { variant: "clean", of: 0 }); }
+        }
         // reel cover (grid + Reels tab): the hook over the bank photo — sent as variant "cover", used only as cover_url
         if (d.photo) {
           await still("post-story", { type: "reel-cover", title: d.hook || d.headline || "", label: d.kicker || "NEWS", ...photoOf(d) }, f("cover.jpg"));
