@@ -132,14 +132,19 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
 #s5 .icoTile{align-self:center}
 #s5 .q{text-shadow:0 3px 26px rgba(5,7,15,.9);font-weight:800;font-size:var(--q);line-height:1.24;letter-spacing:-.028em;max-width:860px}
 #s5 .cta{margin-top:46px;font-weight:600;font-size:29px;color:#ffdd85;letter-spacing:.04em}
-/* corner keyword badge (R68, owner 2026-10-17 [stated]; replaces the S5 pill): the gold tab of the 4:5 cards
-   (badge(0.68) of out/keyword-corner-1017/source-build3.py), flush to the right edge. Its top is the top of the
-   safe area (--bar-top: 250 px under Instagram's own header in the "instagram" layout, 0 in "full"), so the
-   Reels header never covers it. On screen ~18.9 s -> the 21.4 s logo cut; only when dm_keyword is set. */
-#kwBadge{display:none;position:absolute;right:0;top:calc(var(--bar-top) + 2px);z-index:9;background:#C9A24A;color:#0B0B0D;
-  padding:20px 29px 17px 27px;border-bottom-left-radius:27px;box-shadow:0 8px 28px rgba(0,0,0,.4);text-align:center}
-#kwBadge .s{font:800 13px/1 PJS;letter-spacing:3px;opacity:.75;margin-bottom:6px}
-#kwBadge .k{font:800 43px/1 PJS;letter-spacing:2px}
+/* keyword badge — fix pack 1.4 C1 (owner 2026-10-24 [stated]): the R68 corner tab was clipped at the right edge and sat
+   under Instagram's own buttons (23 Oct Yas reel). Now a SMALL gold pill centred UNDER the logo (logo 210 px wide = ~56 px
+   tall, so +68 px clears it), inside the safe area, on screen for the WHOLE reel; only when dm_keyword is set — the
+   badge-free copy for Telegram/Facebook is rendered without it. */
+#kwBadge{display:none;position:absolute;left:0;right:0;top:calc(var(--logo-top) + 68px);z-index:9;text-align:center;pointer-events:none}
+#kwBadge .p{display:inline-flex;align-items:baseline;gap:10px;background:#C9A24A;color:#0B0B0D;
+  padding:8px 20px 7px;border-radius:100px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#kwBadge .s{font:800 13px/1 PJS;letter-spacing:3px;opacity:.75}
+#kwBadge .k{font:800 26px/1 PJS;letter-spacing:1.5px}
+/* C2: on the question frame a large «Comment KEYWORD for the source link» takes the place of «Tell us in the comments» */
+#s5 .kwLine{display:none;margin-top:46px;font-weight:800;font-size:48px;line-height:1.22;letter-spacing:-.015em;max-width:880px;
+  text-shadow:0 3px 26px rgba(5,7,15,.9)}
+#s5 .kwLine b{font-weight:800;color:#0B0B0D;background:#C9A24A;border-radius:14px;padding:0 14px;letter-spacing:.02em;text-shadow:none}
 
 /* ---- S6 end card ---- */
 #s6{align-items:center;justify-content:center;text-align:center}
@@ -217,8 +222,9 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
   <div class="icoTile"><img id="s5ico" src="assets/chat-two-bubbles-oval.svg"></div>
   <div class="q" id="s5txt"></div>
   <div class="cta">Tell us in the comments</div>
+  <div class="kwLine" id="kwLine">Comment <b id="kwLineWord"></b> for the source link</div>
 </section>
-<div id="kwBadge"><div class="s">COMMENT</div><div class="k" id="kwWord"></div></div>
+<div id="kwBadge"><span class="p"><span class="s">COMMENT</span><span class="k" id="kwWord"></span></span></div>
 
 <!-- 6 ------------------------------------------------------------------ -->
 <section class="sc" id="s6">
@@ -257,10 +263,15 @@ $('#s2label').textContent = D.statLabelShort || 'THE NUMBER';
 $('#s3txt').textContent   = D.detail;
 $('#s4txt').textContent   = D.takeaway;
 $('#s5txt').textContent   = D.question;
-/* corner keyword badge (R68): only when the site sends dm_keyword - without it S5 is exactly as before */
+/* keyword badge + question-frame line (fix pack 1.4 C1/C2): only when the site sends dm_keyword - without it
+   (the badge-free copy) the reel is exactly as before */
 if (D.dm_keyword) {
-  $('#kwWord').textContent = String(D.dm_keyword).toUpperCase();
+  const kw = String(D.dm_keyword).toUpperCase();
+  $('#kwWord').textContent = kw;
+  $('#kwLineWord').textContent = kw;
   $('#kwBadge').style.display = 'block';
+  $('#s5 .cta').style.display = 'none';
+  $('#kwLine').style.display = 'block';
 }
 if (D.icons) {
   if (D.icons.stat)     $('#s2ico').src = 'assets/' + D.icons.stat + '.svg';
@@ -460,9 +471,9 @@ tl.from('#s4 .icoTile', {scale: 0, rotate: 25, duration: .62, ease: 'back.out(2.
 tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'}, 18.28)
   .from('#s5txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 18.50)
   .from('#s5 .cta', {opacity: 0, y: 18, duration: .55}, 18.86);
-/* the corner badge rides S5 from ~18.9 s to the 21.4 s logo cut - >=2 s on screen; no keyword -> no tween */
-if (D.dm_keyword) tl.fromTo('#kwBadge', {opacity: 0, x: 40}, {opacity: 1, x: 0, duration: .5, ease: 'power3.out'}, 18.98)
-  .to('#kwBadge', {opacity: 0, duration: .3}, 21.30);
+/* fix pack 1.4 C1: the badge has no tween - it is on screen from the first frame to the last.
+   C2: the big keyword line enters where the «Tell us» line used to */
+if (D.dm_keyword) tl.from('#kwLine', {opacity: 0, y: 18, duration: .55}, 18.86);
 
 /* S6 */
 tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, 21.46)
