@@ -30,8 +30,9 @@
   const A = {};
   // layout boxes of the last draw(): brand / slide / kicker / head / foot / strip — read by studio/test-keyword-badge.mjs
   let BOX = [];
-  // R68 (owner 2026-10-17): host.html draws the keyword badge in the top-right corner after draw(); while the
-  // card carries dm_keyword the slide tag moves down out of its way
+  // R68 (owner 2026-10-17): host.html draws the keyword badge in a top corner after draw() — the top-LEFT since fix pack
+  // 1.5 #9 (owner 2026-10-26: Instagram's own «4/6» counter hid it top-right); while the card carries dm_keyword the slide
+  // tag («4 / 6», top-right) stays 44 px down, where the owner wants it, clear of Instagram's counter
   let KW = false;
   const box = (k, y0, y1, x0, x1) => BOX.push({ k, y0: Math.round(y0), y1: Math.round(y1), x0: Math.round(x0 ?? 0), x1: Math.round(x1 ?? W) });
 
@@ -309,7 +310,7 @@
   }
   function slideTag(ctx, slide, y) {
     if (!slide) return;
-    if (KW) y += 44;   // below the corner keyword badge (~99 px high)
+    if (KW) y += 44;   // 44 px down while a badge is on the card (kept after fix pack 1.5 moved the badge top-left: owner keeps the counter here)
     ctx.font = font(600, 22); ctx.fillStyle = "#8a8a8a"; ctx.textBaseline = "alphabetic";
     const tw = spaced(ctx, slide.n + " / " + slide.of, W - M, y, 3, "right");
     box("slide", y - 20, y + 4, W - M - tw, W - M);

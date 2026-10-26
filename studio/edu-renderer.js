@@ -92,7 +92,7 @@
   }
   function slideTag(ctx, slide, y) {
     if (!slide) return;
-    if (KW) y += 44;   // below the corner keyword badge
+    if (KW) y += 44;   // 44 px down while a badge is on the card (kept after fix pack 1.5 moved the badge top-left: owner keeps the counter here)
     ctx.font = font(600, 22); ctx.fillStyle = MUTED; ctx.textBaseline = "alphabetic";
     const tw = spaced(ctx, slide.n + " / " + slide.of, W - M, y, 3, "right");
     box("slide", y - 20, y + 4, W - M - (tw || 120), W - M);

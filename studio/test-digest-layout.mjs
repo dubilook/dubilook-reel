@@ -34,5 +34,18 @@ ok(JSON.stringify(pages) === JSON.stringify([["L"], ["a", "b", "c", "d"], ["e", 
 // a card with no own link left (site sends the profile) still renders; a reel-only link shows «Watch the reel»
 const h2 = digestHtml({ ...data, cards: [lead, card(1, { instagram_url: "https://www.instagram.com/dubilook/", reel_url: "https://www.instagram.com/reel/r1/" })] });
 ok(h2.includes('href="https://www.instagram.com/reel/r1/"'), "reel button");
+// fix pack 1.5 #14 (owner 2026-10-26): the cover said «18 stories» while the caption and /today said «13» — the number is
+// the site's count of ENGLISH stories (data.stories), the same everywhere: cover dateline, WhatsApp share text, 20:00 post
+const twins = [lead, ...Array.from({ length: 4 }, (_, i) => card(i + 1)), ...Array.from({ length: 3 }, (_, i) => card(i + 1, { lang: "ar", headline: "عنوان " + i }))];
+const h3 = digestHtml({ ...data, stories: 5, cards: twins });
+ok(h3.includes("<span>5 stories</span>"), "the cover dateline shows the site's count, not the card count (8)");
+ok(!h3.includes("8 stories"), "no «8 stories» anywhere on the cover");
+ok(decodeURIComponent(h3.match(/href="(https:\/\/wa\.me\/\?text=[^"]+)"/)[1]).includes("5 stories"), "the WhatsApp share text says 5 stories");
+const p3 = R.postHtml({ ...data, stories: 5, cards: twins, keyword: "Marina" });
+ok(p3.includes("5 stories in one PDF"), "the 20:00 post says 5 stories");
+// an older digest without data.stories: English cards by distinct story key (Arabic twins are not stories of their own)
+const h4 = digestHtml({ ...data, cards: twins });
+ok(h4.includes("<span>5 stories</span>"), "without data.stories: distinct English stories = 5, not 8");
+ok(R.storyCount({ cards: [card(1), card(1, { lang: "ar" }), card(2)] }) === 2, "storyCount helper counts English stories");
 console.log(`${checks - fails}/${checks} checks passed`);
 process.exit(fails ? 1 : 0);

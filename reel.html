@@ -98,6 +98,10 @@ body{font-family:PJS,sans-serif;background:#05070f;color:#fff;position:relative}
 .bar.g{background:linear-gradient(180deg,#ffdd85,#e5a32b);
   box-shadow:0 0 74px -4px rgba(245,196,81,.6),inset 0 1px 0 rgba(255,255,255,.55)}
 .val.b{color:#a9bcff} .val.g{color:#ffdd85}
+/* fix pack 1.5 #5 (owner 2026-10-26): the bars showed «30» and «3» with no unit — chart.unit («Billion Dirham») sits
+   under every value, in the bar's colour, when the site sends it */
+.unit{font-weight:600;font-size:22px;letter-spacing:.1em;margin:-10px 0 16px;white-space:nowrap;opacity:.85}
+.unit.b{color:#a9bcff} .unit.g{color:#ffdd85}
 #badge{display:flex;align-items:baseline;gap:10px;margin-bottom:16px;padding:10px 22px;border-radius:100px;
   background:linear-gradient(140deg,rgba(245,196,81,.26),rgba(245,196,81,.08));
   border:1px solid rgba(245,196,81,.5);box-shadow:0 0 42px -8px rgba(245,196,81,.55);
@@ -307,6 +311,7 @@ if (hasChart) {
     <div class="col">
       ${b.badge ? `<div id="badge"><b>${b.badge.split(' ')[0]}</b>${b.badge.split(' ').slice(1).join(' ')}</div>` : ''}
       <div class="val ${b.color === 'gold' ? 'g' : 'b'}" id="v${i}">0</div>
+      ${D.chart.unit ? `<div class="unit ${b.color === 'gold' ? 'g' : 'b'}" id="u${i}">${String(D.chart.unit).toUpperCase()}</div>` : ''}
       <div class="bar ${b.color === 'gold' ? 'g' : 'b'}" id="bar${i}"><div class="shine"></div></div>
     </div>`).join('');
   $('#xlab').innerHTML = bars.map(b => `<div class="xl">${b.label.replace('\n', '<br>')}</div>`).join('');
@@ -442,6 +447,7 @@ if (hasChart) {
               onUpdate: () => {const cs = numScale(Math.max(...chartTargets.map(x => x.v)));
                 document.getElementById('v' + c.i).textContent = cs.div > 1 ? fmtScaled(o.n / cs.div, decimalsFor(c.v / cs.div)) + cs.short : nf(o.n)}}, at)
       .from('#v' + c.i, {opacity: 0, duration: .28}, at);
+    if (document.getElementById('u' + c.i)) tl.from('#u' + c.i, {opacity: 0, y: 8, duration: .32}, at + .1);
   });
   if (document.getElementById('badge'))
     tl.from('#badge', {scale: .4, opacity: 0, duration: .62, ease: 'back.out(2.7)'}, 7.30);

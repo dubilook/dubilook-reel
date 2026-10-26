@@ -31,6 +31,15 @@ export function dateLabelOf(iso) {
   return dt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[c]));
+/** Fix pack 1.5 #14 (owner 2026-10-26): the number of stories, the SAME everywhere — the site's count of English stories
+ *  (data.stories, DailyDigest::storyCount); an older digest without it: English cards by distinct story key, never the
+ *  card count (the cover said «18 stories» for 13 stories + 5 Arabic twins). */
+export function storyCount(d) {
+  if (Number.isFinite(Number(d.stories)) && Number(d.stories) > 0) return Number(d.stories);
+  const keys = new Set();
+  (d.cards || []).forEach((c, i) => { if ((c.lang || "en") === "ar") return; keys.add(c.story || "card" + i); });
+  return keys.size;
+}
 const PAGE1_CELLS = 2, PAGE_CELLS = 4;
 
 // R6: 4:5 heroes fill the box, 9:16 (stories, reel covers) are shown whole on navy; no image → a calm block with the tag.
@@ -59,7 +68,7 @@ const WA_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6a6.4
 /** 2026-10-17 PART 5: wa.me with a short text + the file's page (dubilook.com/today/{date}) — never the raw PDF URL. */
 export function shareUrl(d) {
   const page = d.page_url || `https://dubilook.com/today/${d.date}`;
-  const n = (d.cards || []).length;
+  const n = storyCount(d);   // fix pack 1.5 #14: the same number as the cover, the caption and /today
   return "https://wa.me/?text=" + encodeURIComponent(`Dubai Property Today, ${d.date_label || dateLabelOf(d.date)}: ${n} ${n === 1 ? "story" : "stories"} in one PDF. ${page}`);
 }
 const shareBtn = (d) => `<a class="btn wa" href="${esc(shareUrl(d))}">${WA_ICON}<span>Share this file on WhatsApp</span></a>`;
@@ -104,7 +113,8 @@ export function digestHtml(d) {
   const n = pages.length;
   const run = (k) => `<footer class="run"><span>Dubilook, your daily property briefing</span><span>Page ${k + 1} of ${n}</span></footer>`;
   // owner 17 Oct [stated]: «The day in one figure» removed — it repeated a card and said nothing
-  const stories = `${d.cards.length} ${d.cards.length === 1 ? "story" : "stories"}`;
+  const nStories = storyCount(d);   // fix pack 1.5 #14 (owner 2026-10-26): English stories, not cards — «18» was 13 + Arabic twins
+  const stories = `${nStories} ${nStories === 1 ? "story" : "stories"}`;
   const sheets = pages.map((cells, k) => k === 0
     ? `<section class="sheet">
  <header class="mast">
@@ -167,7 +177,7 @@ h1{position:absolute;left:84px;top:178px;font-family:PlexCond;font-weight:700;fo
 </style></head><body><div class="glow"></div>
 <div class="top"><img src="${LOGO_DARK_BG}" alt="Dubilook"><span>Evening edition</span></div>
 <h1>Dubai Property<br>Today</h1>
-<div class="date"><b>${esc(dateLabel)}</b> · ${d.cards.length} stories in one PDF</div>
+<div class="date"><b>${esc(dateLabel)}</b> · ${storyCount(d)} stories in one PDF</div>
 ${grid}
 <div class="pdf">${d.cards.every((c) => c.source_url) ? "Today's stories with their source links" : "Today's stories"} — in one file.</div>
 <div class="pill">COMMENT <u>${kw}</u> → WE'LL DM YOU TODAY'S PDF</div>

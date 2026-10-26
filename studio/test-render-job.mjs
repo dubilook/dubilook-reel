@@ -61,13 +61,13 @@ const find = (item, pos) => got.find((g) => g.item === item && g.position === po
 ok(code === 0, "render-job exit " + code);
 ok(complete && complete.items.length === 9, "render-complete lists 9 items: " + JSON.stringify(complete));
 const poster = fs.readFileSync(path.join(ROOT, "assets", "end-poster.jpg"));
-// decode the uploaded JPEGs in a browser and look at the top-right corner (gold = the badge)
+// decode the uploaded JPEGs in a browser and look at the top-LEFT corner (gold = the badge; fix pack 1.5 #9 moved it there)
 const exe = process.env.CHROME_PATH || (process.platform === "win32" ? "C:/Program Files/Google/Chrome/Application/chrome.exe" : undefined);
 const browser = await chromium.launch({ executablePath: exe && fs.existsSync(exe) ? exe : undefined });
 const pg = await browser.newPage();
 const corner = (g) => pg.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode();
   const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const x = c.getContext("2d"); x.drawImage(im, 0, 0);
-  return [...x.getImageData(im.width - 60, 10, 1, 1).data].slice(0, 3); }, "data:image/jpeg;base64," + g.bytes.toString("base64"));
+  return [...x.getImageData(60, 10, 1, 1).data].slice(0, 3); }, "data:image/jpeg;base64," + g.bytes.toString("base64"));
 const gold = (p) => Math.abs(p[0] - 0xC9) < 30 && Math.abs(p[1] - 0xA2) < 30 && Math.abs(p[2] - 0x4A) < 30;
 ok(!got.some((g) => g.item === 3 && g.position < 20 && g.meta.variant), "carousel 3: a main file carries a variant (the site would leave it out of the post)");
 const c3 = got.filter((g) => g.item === 3 && g.position < 20).sort((a, b) => a.position - b.position);

@@ -1,7 +1,8 @@
 // Corner keyword badge (batch R68 PART 1, owner 2026-10-17 [stated]): the «COMMENT X → WE'LL DM YOU THE SOURCE» pill
-// is gone; a small gold tab sits flush in the top-right corner (B5-gold-68pct.jpg). Rendered through host.html
-// renderCard exactly as render-job.mjs does, for every 4:5 layout × a 3-letter and a 6-letter keyword:
-//   1. with a keyword: badge box flush top-right (x1 = 1080, y0 = 0), ~99 px high, gold #C9A24A inside
+// is gone; a small gold tab sits flush in a top corner (B5-gold-68pct.jpg). Fix pack 1.5 (owner 2026-10-26): the
+// corner is the top-LEFT — Instagram's own «4/6» counter overlays the top-right and hid the keyword. Rendered through
+// host.html renderCard exactly as render-job.mjs does, for every 4:5 layout × a 3-letter and a 6-letter keyword:
+//   1. with a keyword: badge box flush top-left (x0 = 0, y0 = 0), ~99 px high, gold #C9A24A inside
 //   2. every pixel that changes against the same card WITHOUT a keyword lies inside the badge (+ shadow) or the slide tag
 //      (it moves down below the badge) — no pill elsewhere
 //   3. the badge never touches the logo, slide tag, kicker, headline block, footer or bar strip (renderer boxes)
@@ -70,15 +71,17 @@ const run = (kind, card, kw) => page.evaluate(async ([k, c, w]) => {
   for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) {
     const i = (y * A.w + x) * 4;
     if (Math.abs(A.d[i] - B.d[i]) + Math.abs(A.d[i + 1] - B.d[i + 1]) + Math.abs(A.d[i + 2] - B.d[i + 2]) <= 40) continue;
-    const inBadge = badge && x >= badge.x0 - pad && y <= badge.y1 + pad;
-    // the carousel slide tag («3 / 7») moves down below the badge — that box may change too
-    const inSlide = boxes.some((b) => b.k === "slide" && x >= b.x0 - 4 && x <= b.x1 + 4 && y >= b.y0 - 4 && y <= b.y1 + 4);
+    const inBadge = badge && x <= badge.x1 + pad && y <= badge.y1 + pad;
+    // the carousel slide tag («3 / 7») moves down 44 px while a badge is on the card (kept so since fix pack 1.5: the
+    // owner wants our counter where it is, clear of Instagram's own) — its box and the place it left may change
+    const inSlide = boxes.some((b) => b.k === "slide" && x >= b.x0 - 4 && x <= b.x1 + 4 && y >= b.y0 - 48 && y <= b.y1 + 4);
     if (!inBadge && !inSlide) { outside++; if (!first) first = [x, y]; }
   }
   const at = (P, x, y) => { const i = (y * P.w + x) * 4; return [P.d[i], P.d[i + 1], P.d[i + 2]]; };
-  const gold = badge ? at(A, badge.x0 + 10, 8) : null;
-  const corner = at(B, A.w - 12, 8);
-  return { badge, boxes, plainBadge, outside, first, gold, corner };
+  const gold = badge ? at(A, badge.x1 - 10, 8) : null;
+  const corner = at(B, 12, 8);
+  const oldCorner = at(A, A.w - 12, 8);
+  return { badge, boxes, plainBadge, outside, first, gold, corner, oldCorner };
 }, [kind, card, kw]);
 
 let fails = 0, checks = 0;
@@ -88,14 +91,15 @@ const hit = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 for (const [name, kind, card] of CASES) {
   for (const [len, kw] of KW) {
     const r = await run(kind, card, kw), tag = `${name} kw${len}`;
-    ok(r.badge && r.badge.x1 === 1080 && r.badge.y0 === 0, `${tag}: no badge flush top-right: ${JSON.stringify(r.badge)}`);
+    ok(r.badge && r.badge.x0 === 0 && r.badge.y0 === 0, `${tag}: no badge flush top-left: ${JSON.stringify(r.badge)}`);
+    ok(!isGold(r.oldCorner), `${tag}: the top-right corner is still gold (Instagram's counter sits there): ${r.oldCorner}`);
     ok(r.badge && r.badge.y1 >= 90 && r.badge.y1 <= 110 && r.badge.x1 - r.badge.x0 >= 110 && r.badge.x1 - r.badge.x0 <= 300, `${tag}: badge size off: ${JSON.stringify(r.badge)}`);
     ok(isGold(r.gold), `${tag}: badge not gold: ${r.gold}`);
     ok(r.outside === 0, `${tag}: ${r.outside} px changed outside the badge (first at ${r.first}) — a pill is still drawn`);
     const clash = r.badge ? r.boxes.filter((b) => GUARD.includes(b.k) && hit(r.badge, b)) : [];
     ok(r.badge && !clash.length, `${tag}: badge touches ${JSON.stringify(clash)}`);
     ok(r.boxes.some((b) => b.k === "brand"), `${tag}: renderer recorded no logo box`);
-    ok(!r.plainBadge && !isGold(r.corner), `${tag}: card WITHOUT keyword has a badge / gold corner`);
+    ok(!r.plainBadge && !isGold(r.corner), `${tag}: card WITHOUT keyword has a badge / gold top-left corner`);
   }
   console.log(`  ${name} done`);
 }

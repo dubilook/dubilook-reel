@@ -35,6 +35,7 @@
     else window.DUBILOOK_POSTS.draw(ctx, card, c.height);
     // R68 (owner 2026-10-17): the corner keyword badge, drawn last on every 4:5 card with dm_keyword
     // (news/photo layouts, carousel cover + content slides, Arabic, edu). 9:16 stories never get it.
+    // Fix pack 1.5 #9 (owner 2026-10-26): it sits in the top-LEFT corner (keyword-badge.js).
     const R = kind === "edu" ? window.DUBILOOK_EDU : kind === "ar" || kind === "ar-story" ? window.DUBILOOK_AR : window.DUBILOOK_POSTS;
     const boxes = R && typeof R.boxes === "function" ? R.boxes() : [];
     const badge = c.height === 1350 && card.dm_keyword ? window.DUBILOOK_BADGE.draw(ctx, card.dm_keyword, c.width) : null;
