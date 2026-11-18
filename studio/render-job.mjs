@@ -11,6 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { digestHtml, postHtml } from "./digest-renderer.mjs";
+import { reelCoverCard } from "./reel-cover.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -294,11 +295,10 @@ for (const it of payload.items) {
           if (rc.status) console.warn(`! reel ${it.id}: the badge-free copy failed — Telegram/Facebook get the Instagram video`);
           else { appendLogoEnd(outClean, d); await upload(it.id, 22, "video", outClean, { variant: "clean", of: 0 }); }
         }
-        // reel cover (grid + Reels tab): the hook over the bank photo — sent as variant "cover", used only as cover_url
-        if (d.photo) {
-          await still("post-story", { type: "reel-cover", title: d.hook || d.headline || "", label: d.kicker || "NEWS", ...photoOf(d) }, f("cover.jpg"));
-          await upload(it.id, 21, "image", f("cover.jpg"), { variant: "cover" });
-        }
+        // reel cover (grid + Reels tab), sent as variant "cover", used only as cover_url: the hook over the bank photo,
+        // or (bundle 2a, OI-103) a template cover when the reel has no photo or the photo cannot be fetched. Always sent.
+        await still("post-story", reelCoverCard(d, photoOf(d)), f("cover.jpg"));
+        await upload(it.id, 21, "image", f("cover.jpg"), { variant: "cover", template: !d.photo });
         break;
       }
       default: throw new Error("unknown format " + it.format);

@@ -288,9 +288,27 @@
       g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.5, "rgba(0,0,0,0.55)"); g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g; ctx.fillRect(0, H * 0.3, W, H * 0.45);
     }
+    // bundle 2a (OI-103): no photo → the TEMPLATE cover. A red glow behind the hook, two hairlines, and the reel's own
+    // figure under the hook when it has one, so the cover never reads as an empty black frame.
+    const stat = !img && card.stat ? String(card.stat) : "";
+    if (!img) {
+      const glow = ctx.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, H * 0.42);
+      glow.addColorStop(0, "rgba(227,20,28,0.30)"); glow.addColorStop(0.55, "rgba(227,20,28,0.08)"); glow.addColorStop(1, "rgba(227,20,28,0)");
+      ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.fillRect(M, 430, W - 2 * M, 2); ctx.fillRect(M, 1440, W - 2 * M, 2);
+    }
     brandRow(ctx, 330);
-    const end = headlineBlock(ctx, card.title, card.red || [], 560, 1380, {}, { ink: [255, 255, 255], sub: "#fff", soft: "#ddd", maxSize: 190,
+    const end = headlineBlock(ctx, card.title, card.red || [], 560, stat ? 1130 : 1380, {}, { ink: [255, 255, 255], sub: "#fff", soft: "#ddd", maxSize: 190,
       onTop: (yTop) => kicker(ctx, String(card.label || "NEWS").toUpperCase(), yTop - 30) });
+    if (stat) {
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      let size = 150; ctx.font = font(900, size);
+      while (size > 80 && ctx.measureText(stat).width > W - 2 * M - 40) { size -= 6; ctx.font = font(900, size); }
+      ctx.fillStyle = RED; ctx.fillText(stat, W / 2, 1290);
+      if (card.stat_unit) { ctx.font = font(800, 40); ctx.fillStyle = WHITE; ctx.fillText(String(card.stat_unit).toUpperCase(), W / 2, 1350); }
+      if (card.stat_label) { ctx.font = font(600, 26); ctx.fillStyle = GREY; spaced(ctx, String(card.stat_label).toUpperCase(), W / 2, 1400, 4, "center"); }
+      ctx.textAlign = "left";
+    }
     ctx.font = font(800, 28); ctx.fillStyle = "#f2f2f2"; ctx.textBaseline = "alphabetic";
     spaced(ctx, "WATCH THE REEL  ▶", W / 2, 1520, 6, "center");
     photoCredit(ctx, card);
