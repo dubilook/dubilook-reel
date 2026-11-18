@@ -406,7 +406,16 @@ const SC = [
   {el: '#s5', t: 18.20, d: 3.20},
   {el: '#s6', t: 21.40, d: 3.40},
 ];
-const TOTAL = 24.8;
+/* Log fix 18 Nov 2026 (OI-149): a text scene whose text is empty is skipped, no empty screen. The scenes after it
+   move up and the reel is that much shorter. With all three texts present nothing changes (T(t) === t). */
+const blank = v => !(typeof v === 'string' && v.trim());
+const SKIP = {'#s3': blank(D.detail), '#s4': blank(D.takeaway), '#s5': blank(D.question)};
+const CUT = SC.filter(s => SKIP[s.el]);
+CUT.forEach(s => { document.querySelector(s.el).style.display = 'none'; });
+const T = t => t - CUT.filter(s => t >= s.t).reduce((a, s) => a + s.d, 0);
+const SHOWN = SC.filter(s => !SKIP[s.el]);
+window.SKIPPED = CUT.map(s => s.el.slice(1));
+const TOTAL = 24.8 - CUT.reduce((a, s) => a + s.d, 0);
 const tl = gsap.timeline({paused: true});
 
 /* ambient — one continuous move across the whole reel */
@@ -418,10 +427,11 @@ tl.fromTo('#orbA', {x: 0, y: 0}, {x: 60, y: -40, duration: TOTAL, ease: 'none'},
   .from('#srcline', {opacity: 0, duration: .7}, 0.55);
 
 /* generic scene in/out */
-SC.forEach(s => {
-  tl.set(s.el, {opacity: 1}, s.t)
-    .to(s.el, {opacity: 0, duration: .34, ease: 'power2.in'}, s.t + s.d - .34)
-    .set(s.el, {opacity: 0}, s.t + s.d);
+SHOWN.forEach(s => {
+  const t = T(s.t);
+  tl.set(s.el, {opacity: 1}, t)
+    .to(s.el, {opacity: 0, duration: .34, ease: 'power2.in'}, t + s.d - .34)
+    .set(s.el, {opacity: 0}, t + s.d);
 });
 
 /* S1 */
@@ -463,45 +473,50 @@ if (hasChart) {
 }
 
 /* S3 */
-tl.from('#s3 .icoTile', {scale: 0, rotate: -25, duration: .62, ease: 'back.out(2.2)'}, 10.28)
-  .from('#s3 .lead', {opacity: 0, x: -18, duration: .5}, 10.46)
-  .from('#s3txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 10.58);
+if (!SKIP['#s3'])
+tl.from('#s3 .icoTile', {scale: 0, rotate: -25, duration: .62, ease: 'back.out(2.2)'}, T(10.28))
+  .from('#s3 .lead', {opacity: 0, x: -18, duration: .5}, T(10.46))
+  .from('#s3txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, T(10.58));
 
 /* S4 */
-tl.from('#s4 .icoTile', {scale: 0, rotate: 25, duration: .62, ease: 'back.out(2.2)'}, 14.28)
-  .from('#s4 .rule', {scaleX: 0, duration: .55, ease: 'power3.out'}, 14.48)
-  .from('#s4 .lead', {opacity: 0, x: -18, duration: .5}, 14.56)
-  .from('#s4txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 14.66);
+if (!SKIP['#s4'])
+tl.from('#s4 .icoTile', {scale: 0, rotate: 25, duration: .62, ease: 'back.out(2.2)'}, T(14.28))
+  .from('#s4 .rule', {scaleX: 0, duration: .55, ease: 'power3.out'}, T(14.48))
+  .from('#s4 .lead', {opacity: 0, x: -18, duration: .5}, T(14.56))
+  .from('#s4txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, T(14.66));
 
 /* S5 */
-tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'}, 18.28)
-  .from('#s5txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, 18.50)
-  .from('#s5 .cta', {opacity: 0, y: 18, duration: .55}, 18.86);
+if (!SKIP['#s5'])
+tl.from('#s5 .icoTile', {scale: 0, y: 30, duration: .66, ease: 'back.out(2.3)'}, T(18.28))
+  .from('#s5txt', {opacity: 0, y: 30, duration: .7, ease: 'power3.out'}, T(18.50))
+  .from('#s5 .cta', {opacity: 0, y: 18, duration: .55}, T(18.86));
 /* fix pack 1.4 C1: the badge has no tween - it is on screen from the first frame to the last.
    C2: the big keyword line enters where the «Tell us» line used to */
-if (D.dm_keyword) tl.from('#kwLine', {opacity: 0, y: 18, duration: .55}, 18.86);
+if (D.dm_keyword && !SKIP['#s5']) tl.from('#kwLine', {opacity: 0, y: 18, duration: .55}, T(18.86));
 
 /* S6 */
-tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, 21.46)
-  .to('#lens', {opacity: 0, scale: 2.6, duration: .5, ease: 'power2.in'}, 22.10)
-  .to('#logo, #logoTm', {opacity: 0, duration: .35}, 22.0)   /* owner 2026-10-16: one logo on the end card */
-    .from('#endLogo', {opacity: 0, scale: .86, duration: .75, ease: 'back.out(1.6)'}, 22.24)
-  .to('#endRule', {width: 480, duration: .7, ease: 'power3.out'}, 22.70)
-  .from('#endTag', {opacity: 0, y: 20, duration: .6}, 22.92)
-  .from('#endUrl', {opacity: 0, y: 16, duration: .6}, 23.14);
+tl.fromTo('#lens', {scale: .2, opacity: 0, rotate: -120}, {scale: 1, opacity: .9, rotate: 0, duration: .9, ease: 'back.out(1.7)'}, T(21.46))
+  .to('#lens', {opacity: 0, scale: 2.6, duration: .5, ease: 'power2.in'}, T(22.10))
+  .to('#logo, #logoTm', {opacity: 0, duration: .35}, T(22.0))   /* owner 2026-10-16: one logo on the end card */
+    .from('#endLogo', {opacity: 0, scale: .86, duration: .75, ease: 'back.out(1.6)'}, T(22.24))
+  .to('#endRule', {width: 480, duration: .7, ease: 'power3.out'}, T(22.70))
+  .from('#endTag', {opacity: 0, y: 20, duration: .6}, T(22.92))
+  .from('#endUrl', {opacity: 0, y: 16, duration: .6}, T(23.14));
 
 /* background steps back while body copy is on screen, forward for hook / stat / end */
-tl.set('#dim', {opacity: 0}, 0)
-  .to('#dim', {opacity: .55, duration: .5, ease: 'power2.inOut'}, 10.10)   // S3 in
-  .to('#dim', {opacity: .62, duration: .4, ease: 'none'}, 14.20)           // S4
-  .to('#dim', {opacity: .58, duration: .4, ease: 'none'}, 18.20)           // S5
-  .to('#dim', {opacity: 0,   duration: .6, ease: 'power2.inOut'}, 21.30);  // S6 opens up
+tl.set('#dim', {opacity: 0}, 0);
+const DIM = {'#s3': .55, '#s4': .62, '#s5': .58};
+SHOWN.filter(s => DIM[s.el]).forEach((s, k) => {
+  if (k === 0) tl.to('#dim', {opacity: DIM[s.el], duration: .5, ease: 'power2.inOut'}, T(s.t) - .10);   // first text scene in
+  else tl.to('#dim', {opacity: DIM[s.el], duration: .4, ease: 'none'}, T(s.t));
+});
+if (SHOWN.some(s => DIM[s.el])) tl.to('#dim', {opacity: 0, duration: .6, ease: 'power2.inOut'}, T(21.40) - .10);  // S6 opens up
 
 /* neon runners — card and icon tiles */
 runNeon(tl, document.querySelector('#s2 .glass'), 42, '#eef3ff', 700, 4.55, 2.6, 2);
-runNeon(tl, document.querySelector('#s3 .icoTile'), 40, '#eaf0ff', 300, 10.50, 1.6, 2);
-runNeon(tl, document.querySelector('#s4 .icoTile'), 40, '#eaf0ff', 300, 14.50, 1.6, 2);
-runNeon(tl, document.querySelector('#s5 .icoTile'), 40, '#eaf0ff', 300, 18.50, 1.4, 2);
+if (!SKIP['#s3']) runNeon(tl, document.querySelector('#s3 .icoTile'), 40, '#eaf0ff', 300, T(10.50), 1.6, 2);
+if (!SKIP['#s4']) runNeon(tl, document.querySelector('#s4 .icoTile'), 40, '#eaf0ff', 300, T(14.50), 1.6, 2);
+if (!SKIP['#s5']) runNeon(tl, document.querySelector('#s5 .icoTile'), 40, '#eaf0ff', 300, T(18.50), 1.4, 2);
 
 /* looping diagonal shine across each solid bar, once it has finished growing */
 document.querySelectorAll('.shine').forEach((sh, i) => {
